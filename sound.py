@@ -1,12 +1,19 @@
 """
-Banda sonora del efecto mariposa, generada desde la propia simulacion.
+Banda sonora del efecto mariposa, gobernada por la propia simulacion.
 
 Se escuchan 20 de las 3.000 atmosferas. Cada vez que una completa una vuelta
-al atractor suena una nota: la altura sale de lo alto que llego la vuelta
-(el maximo de z) y el lado estereo sale del ala en la que esta (el signo de x).
+al atractor toca una nota:
+
+  - cuando: el instante de la vuelta, ajustado a una rejilla de semicorcheas;
+  - que nota: lo alto que llego la vuelta (el maximo de z) elige entre las
+    notas del acorde que suena en ese momento;
+  - donde: el ala en la que esta (el signo de x) decide el lado estereo.
 
 Mientras las atmosferas coinciden, las 20 tocan la misma melodia al unisono.
-Cuando divergen, la melodia se deshace en 20 melodias distintas.
+Cuando divergen, la melodia se abre en un arpegio de 20 voces.
+
+La progresion de acordes, el bajo, el colchon y el glissando que sube hasta
+el momento de la divergencia son composicion, no datos.
 
 Uso:
   python sound.py --video out/efecto_mariposa.mp4
@@ -22,12 +29,61 @@ import numpy as np
 import butterfly as bf
 
 SR = 48000
-NOTES = [62, 64, 66, 69, 71, 74, 76, 78, 81, 83]   # re mayor pentatonica, D4..B5
 NVOICES = 20
+LEADS = (0, 5, 10, 15, 19)          # voces que suenan en primer plano
+BPM = 96.0
+BEAT = 60.0 / BPM
+S16 = BEAT / 4.0                    # semicorchea
+BAR = 4.0 * BEAT
+
+# Re mayor. Clases de altura de cada acorde: tres notas del acorde y una de color.
+CHORDS = {
+    "D": {"bass": 38, "pcs": (2, 6, 9, 4)},
+    "A": {"bass": 33, "pcs": (9, 1, 4, 11)},
+    "Bm": {"bass": 35, "pcs": (11, 2, 6, 9)},
+    "G": {"bass": 31, "pcs": (7, 11, 2, 9)},
+}
+# (razon de frecuencia, amplitud, caida en s) por parcial, y ataque en s
+TIMBRE = {
+    "celesta": ([(1.0, 1.00, 0.75), (2.0, 0.28, 0.30), (4.0, 0.10, 0.12), (5.42, 0.05, 0.05)], 0.003),
+    "harp": ([(1.0, 1.00, 0.95), (2.0, 0.45, 0.50), (3.0, 0.22, 0.30), (4.0, 0.10, 0.20)], 0.004),
+    "spark": ([(1.0, 1.00, 0.40), (3.0, 0.18, 0.08)], 0.002),
+    "bass": ([(1.0, 1.00, 1.10), (2.0, 0.55, 0.80), (3.0, 0.28, 0.50)], 0.025),
+}
 
 
 def hz(m):
     return 440.0 * 2.0 ** ((m - 69) / 12.0)
+
+
+def pool(chord, lo, hi):
+    pcs = CHORDS[chord]["pcs"]
+    return [m for m in range(lo, hi + 1) if m % 12 in pcs]
+
+
+def chord_plan(ts, tb, tf, te):
+    """Lista de (inicio, acorde). La tension se guarda para justo antes de la divergencia."""
+    plan = []
+    cyc = ["D", "A", "Bm", "G"]
+    t, i = 0.0, 0
+    while t < ts - 0.5 * BAR:
+        plan.append((t, cyc[i % 4])); t += BAR; i += 1
+    half = (tb - ts) * 0.5
+    plan += [(ts, "G"), (ts + half, "A"), (tb, "D")]
+    if tb + BAR < tf - 1.0:
+        plan.append((tb + BAR, "Bm"))
+    end = te - 3.4
+    third = (end - tf) / 3.0
+    plan += [(tf, "G"), (tf + third, "Bm"), (tf + 2 * third, "A"), (end, "D")]
+    return plan
+
+
+def chord_at(plan, t):
+    name = plan[0][1]
+    for t0, c in plan:
+        if t0 <= t + 1e-9:
+            name = c
+    return name
 
 
 def step_times(ci, fps):
@@ -36,20 +92,36 @@ def step_times(ci, fps):
     return u, (idx + 1) / fps
 
 
-def note_events(sub, ci, fps):
-    nsteps = int(ci[-1])
-    u, tt = step_times(ci, fps)
-    voices = np.linspace(0, sub.shape[1] - 1, NVOICES).round().astype(int)
-    out = []
-    for k, v in enumerate(voices):
-        x = sub[:nsteps + 1, v, 0]
-        z = sub[:nsteps + 1, v, 2]
-        pk = np.nonzero((z[1:-1] > z[:-2]) & (z[1:-1] >= z[2:]) & (z[1:-1] > 24.0))[0] + 1
-        t = np.interp(pk, u, tt)
-        deg = np.clip(((z[pk] - 30.0) / 17.0 * len(NOTES)).astype(int), 0, len(NOTES) - 1)
-        for ti, di, xi in zip(t, deg, x[pk]):
-            out.append((float(ti), k, int(di), float(np.clip(xi / 14.0, -1.0, 1.0))))
-    return out
+class Mixer:
+    def __init__(self, n, seed):
+        self.n = n
+        self.rng = np.random.default_rng(seed)
+        self.bus = {}
+        L = int(3.0 * SR)
+        self.tau = np.arange(L) / SR
+
+    def get(self, name):
+        if name not in self.bus:
+            self.bus[name] = np.zeros((self.n, 2))
+        return self.bus[name]
+
+    def note(self, bus, t0, midi, amp, pan=0.0, kind="celesta", cents=0.0):
+        i0 = int(round(t0 * SR))
+        if i0 < 0 or i0 >= self.n:
+            return
+        parts, attack = TIMBRE[kind]
+        m = min(self.tau.size, self.n - i0)
+        tau = self.tau[:m]
+        f = hz(midi) * 2.0 ** (cents / 1200.0)
+        s = np.zeros(m)
+        for ratio, a, dec in parts:
+            if f * ratio < 0.45 * SR:
+                s += a * np.sin(2.0 * math.pi * f * ratio * tau) * np.exp(-tau / dec)
+        s *= (1.0 - np.exp(-tau / attack)) * amp
+        ang = (max(-1.0, min(1.0, pan)) + 1.0) * math.pi / 4.0
+        b = self.get(bus)
+        b[i0:i0 + m, 0] += s * math.cos(ang)
+        b[i0:i0 + m, 1] += s * math.sin(ang)
 
 
 def lowpass_fft(x, cutoff, order=4, highpass=None):
@@ -67,32 +139,114 @@ def synth(sub, ci, ev, fps, seed=5):
     dur = len(ci) / fps
     n = int(math.ceil(dur * SR))
     t = np.arange(n) / SR
-    tg, tb, te = (ev[k] / fps for k in ("go", "burst", "end"))
+    tg, ts, tb, tf, te = (ev[k] / fps for k in ("go", "slow", "burst", "fast", "end"))
+    plan = chord_plan(ts, tb, tf, te)
+    mx = Mixer(n, seed)
+    nsteps = int(ci[-1])
+    u, tt = step_times(ci, fps)
+    voices = np.linspace(0, sub.shape[1] - 1, NVOICES).round().astype(int)
+    detune = rng.uniform(-4.0, 4.0, NVOICES)
 
-    # --- notas: una por cada vuelta de cada atmosfera ---
-    plk = np.zeros((n, 2))
-    L = int(2.4 * SR)
-    tau = np.arange(L) / SR
-    env = np.exp(-tau / 0.50) * (1.0 - np.exp(-tau / 0.004))
-    e2 = np.exp(-tau / 0.22)
-    e3 = np.exp(-tau / 0.10)
-    detune = 2.0 ** (rng.uniform(-3.0, 3.0, NVOICES) / 1200.0)   # +-3 cents
-    octave = np.where(np.arange(NVOICES) % 2 == 0, 1.0, 0.5)
-    evs = note_events(sub, ci, fps)
-    for ti, k, di, pan in evs:
-        i0 = int(ti * SR)
-        m = min(L, n - i0)
-        if m <= 0:
+    def grid(x):
+        return round(x / S16) * S16
+
+    # --- melodia: una nota por cada vuelta de cada atmosfera ---
+    count = 0
+    for k, v in enumerate(voices):
+        x = sub[:nsteps + 1, v, 0]
+        z = sub[:nsteps + 1, v, 2]
+        pk = np.nonzero((z[1:-1] > z[:-2]) & (z[1:-1] >= z[2:]) & (z[1:-1] > 24.0))[0] + 1
+        lead = k in LEADS
+        low = (k % 2 == 1)
+        last = -1.0
+        for p in pk:
+            tq = grid(float(np.interp(p, u, tt)))
+            if tq <= last + 1e-6 or tq > te - 0.3:
+                continue                     # una nota por casilla y voz
+            last = tq
+            ch = chord_at(plan, tq)
+            ps = pool(ch, 50, 76) if low else pool(ch, 62, 88)
+            frac = min(0.999, max(0.0, (z[p] - 30.0) / 17.0))
+            midi = ps[int(frac * len(ps))]
+            beat = int(round(tq / S16)) % 4 == 0
+            amp = (1.0 if lead else 0.4) * (1.0 if beat else 0.78) * rng.uniform(0.9, 1.05)
+            pan = float(np.clip(x[p] / 14.0, -1.0, 1.0)) * (0.75 if lead else 1.0)
+            mx.note("lead" if lead else "cloud", tq + rng.uniform(0.0, 0.006), midi, amp, pan,
+                    "harp" if low else "celesta", detune[k])
+            count += 1
+        # destellos: cuando una voz principal cambia de ala
+        if lead:
+            sw = np.nonzero(np.sign(x[1:]) != np.sign(x[:-1]))[0] + 1
+            lastq = -1.0
+            for p in sw:
+                tq = grid(float(np.interp(p, u, tt)))
+                if tq <= lastq + 2 * S16 or tq < tg + 1.0 or tq > te - 0.5:
+                    continue
+                lastq = tq
+                ps = pool(chord_at(plan, tq), 86, 98)
+                mx.note("spark", tq, ps[int(rng.integers(0, len(ps)))], 0.5 * rng.uniform(0.7, 1.0),
+                        float(np.sign(x[p])) * 0.6, "spark")
+
+    # --- bajo: fundamental del acorde, entra en el segundo compas ---
+    for i, (t0, ch) in enumerate(plan):
+        t1 = plan[i + 1][0] if i + 1 < len(plan) else te
+        tq = grid(t0)
+        while tq < t1 - 0.2:
+            if tq >= BAR - 0.01:
+                mx.note("bass", tq, CHORDS[ch]["bass"], 1.0 if abs(tq - grid(t0)) < 0.01 else 0.6, 0.0, "bass")
+            tq += 2 * BEAT
+
+    # --- colchon: el acorde sostenido, con cruces suaves entre acordes ---
+    pad = np.zeros(n)
+    for i, (t0, ch) in enumerate(plan):
+        t1 = plan[i + 1][0] if i + 1 < len(plan) else te + 1.0
+        envp = np.clip((t - (t0 - 0.25)) / 0.6, 0, 1) * np.clip((t1 + 0.55 - t) / 0.8, 0, 1)
+        sel = envp > 0
+        if not sel.any():
             continue
-        f = hz(NOTES[di]) * detune[k] * octave[k]
-        w = 2.0 * math.pi * f * tau[:m]
-        s = np.sin(w) + 0.40 * np.sin(2.0 * w) * e2[:m] + 0.14 * np.sin(3.01 * w) * e3[:m]
-        s *= env[:m] * (0.85 if octave[k] == 1.0 else 1.0)
-        a = (pan + 1.0) * math.pi / 4.0
-        plk[i0:i0 + m, 0] += s * math.cos(a)
-        plk[i0:i0 + m, 1] += s * math.sin(a)
-    # Al unisono las 20 voces se suman en fase y suenan mucho mas fuerte que
-    # cuando van cada una por su lado: se nivela con una ganancia lenta.
+        tones = pool(ch, 50, 69)[:5]
+        if t0 >= te - 3.5:
+            tones = [50, 57, 62, 64, 66, 69]              # re mayor con novena para el cierre
+        s = np.zeros(int(sel.sum()))
+        for m_ in tones:
+            for dt in (-0.0016, 0.0017):
+                f = hz(m_) * (1.0 + dt)
+                ph = rng.uniform(0, 2 * math.pi)
+                for h, a in ((1, 1.0), (2, 0.30), (3, 0.10)):
+                    s += a * np.sin(2 * math.pi * f * h * t[sel] + ph * h)
+        pad[sel] += s * envp[sel] / len(tones)
+    swell = 0.55 + 0.45 * np.clip((t - ts) / max(0.1, tb - ts), 0, 1) ** 2      # crece hacia la divergencia
+    swell = np.where(t >= tb, 1.0 + 0.5 * np.exp(-(t - tb) / 1.2), swell)
+    pad *= swell * np.clip(t / 1.2, 0, 1) * (0.9 + 0.1 * np.sin(2 * math.pi * 0.11 * t))
+
+    # --- glissando de arpa que sube hasta el momento en que la luz se parte ---
+    penta = [m for m in range(62, 99) if m % 12 in (2, 4, 6, 9, 11)]
+    g0, ng = tb - 0.62, len(penta)
+    for i, m_ in enumerate(penta):
+        tn = g0 + 0.62 * (i / ng) ** 0.8
+        mx.note("gliss", tn, m_, 0.25 + 0.75 * i / ng, -0.7 + 1.4 * i / ng, "harp")
+    for i, m_ in enumerate((50, 57, 62, 66, 69, 74, 78, 81, 86)):       # acorde abierto, arpegiado
+        mx.note("gliss", tb + 0.012 * i, m_, 1.0, -0.6 + 0.15 * i, "harp" if m_ < 70 else "celesta")
+    for i, m_ in enumerate((50, 57, 62, 64, 66, 69, 74, 78)):           # acorde de cierre
+        mx.note("gliss", te - 3.4 + 0.03 * i, m_, 0.7, -0.5 + 0.14 * i, "harp" if m_ < 70 else "celesta")
+
+    # --- aire: subida suave antes de la divergencia y brillo despues ---
+    fx = np.zeros((n, 2))
+    T = 2.4
+    r = np.clip((t - (tb - T)) / T, 0, 1)
+    gate = np.where(t < tb, 1.0, np.exp(-np.maximum(t - tb, 0) / 0.04))
+    for chn in range(2):
+        air = lowpass_fft(rng.standard_normal(n), 5200.0, order=4, highpass=900.0)
+        air /= float(np.abs(air).max())
+        d = np.maximum(t - tb, 0.0)
+        fx[:, chn] += 0.16 * air * r ** 3 * gate
+        fx[:, chn] += 0.20 * air * (t >= tb) * np.exp(-d / 0.9) * (1.0 - np.exp(-d / 0.01))
+    d = np.maximum(t - tb, 0.0)
+    on = (t >= tb) * 1.0
+    boom = np.sin(2 * math.pi * np.cumsum((50.0 + 60.0 * np.exp(-d / 0.10)) * on) / SR) * np.exp(-d / 0.7) * on
+    fx += (0.38 * boom)[:, None]
+
+    # --- niveles: el unisono suma en fase y sonaria mucho mas fuerte que el arpegio ---
     def moving(v, sec):
         w = int(sec * SR)
         c = np.cumsum(np.concatenate([[0.0], v]))
@@ -100,71 +254,39 @@ def synth(sub, ci, ev, fps, seed=5):
         hi = np.clip(np.arange(n) + w // 2, 0, n)
         return (c[hi] - c[lo]) / np.maximum(hi - lo, 1)
 
-    rms = np.sqrt(moving((plk ** 2).sum(axis=1), 1.2))
-    active = rms > 0.05 * rms.max()
-    gain = np.clip((np.median(rms[active]) / np.maximum(rms, 1e-9)) ** 0.8, 0.3, 5.0)
-    gain = moving(np.where(active, gain, 1.0), 0.4)
-    plk *= gain[:, None]
-    plk *= 0.10 / float(np.sqrt((plk[active] ** 2).mean()))
+    def level(x, target, ride=True):
+        p = (x ** 2).sum(axis=1) if x.ndim == 2 else x ** 2
+        rms = np.sqrt(moving(p, 1.2))
+        active = rms > 0.05 * rms.max()
+        if ride:
+            g = np.clip((np.median(rms[active]) / np.maximum(rms, 1e-9)) ** 0.75, 0.35, 4.0)
+            g = moving(np.where(active, g, 1.0), 0.4)
+            x = x * (g[:, None] if x.ndim == 2 else g)
+            p = (x ** 2).sum(axis=1) if x.ndim == 2 else x ** 2
+        return x * (target / math.sqrt(float(p[active].mean())))
 
-    # --- colchon grave ---
-    pad = np.zeros(n)
-    for m_, amp in ((38, 0.50), (45, 0.36), (50, 0.42), (57, 0.22)):
-        for dt in (-0.0015, 0.0, 0.0017):
-            f = hz(m_) * (1.0 + dt)
-            ph = rng.uniform(0, 2 * math.pi)
-            for h in (1, 2, 3, 4):
-                pad += amp / h ** 1.8 * np.sin(2 * math.pi * f * h * t + ph * h)
-    pad *= 0.5 + 0.12 * np.sin(2 * math.pi * 0.09 * t)
-    pad_env = np.clip(t / 2.5, 0, 1) ** 1.5 * (1.0 + 0.35 * np.exp(-((t - tb) / 1.6) ** 2))
-    pad *= pad_env
-    pad *= 0.055 / float(np.sqrt((pad[int(3 * SR):] ** 2).mean()))
-    # acorde final bajo el titulo
-    chord = np.zeros(n)
-    for m_, amp in ((62, 0.5), (66, 0.4), (69, 0.45), (74, 0.3)):
-        for dt in (-0.002, 0.002):
-            chord += amp * np.sin(2 * math.pi * hz(m_) * (1 + dt) * t + rng.uniform(0, 6.28))
-    chord *= np.clip((t - (te - 5.2)) / 2.5, 0, 1) ** 2
-    chord *= 0.05 / float(np.sqrt((chord[int((te - 2.0) * SR):] ** 2).mean()))
+    mel = level(mx.get("lead") + mx.get("cloud"), 0.105)
+    spark = level(mx.get("spark"), 0.020, ride=False)
+    bass = level(mx.get("bass"), 0.050, ride=False)
+    gliss = mx.get("gliss") * (0.30 / float(np.abs(mx.get("gliss")).max()))
+    padl = level(pad, 0.048, ride=False)[:, None]
 
-    # --- subida y golpe en el momento en que la luz se abre ---
-    fx = np.zeros(n)
-    T = 2.6
-    r = np.clip((t - (tb - T)) / T, 0, 1)
-    gate = (t < tb) * 1.0 + (t >= tb) * np.exp(-np.maximum(t - tb, 0) / 0.05)
-    noise = lowpass_fft(rng.standard_normal(n), 2200.0, order=4, highpass=250.0)
-    noise /= float(np.abs(noise).max())
-    fx += 0.22 * noise * r ** 2.6 * gate
-    fr = hz(50) * 2.0 ** (r ** 2)
-    fx += 0.06 * np.sin(2 * math.pi * np.cumsum(fr) / SR) * r ** 2 * gate
-    d = np.maximum(t - tb, 0.0)
-    on = (t >= tb) * 1.0
-    fi = 46.0 + 70.0 * np.exp(-d / 0.11)
-    fx += 0.50 * on * np.sin(2 * math.pi * np.cumsum(fi * on) / SR) * np.exp(-d / 0.60)
-    burst = lowpass_fft(rng.standard_normal(n), 900.0, order=2)
-    burst /= float(np.abs(burst).max())
-    fx += 0.22 * on * burst * np.exp(-d / 0.25)
-
-    # --- reverberacion ---
     def reverb(x, sd):
         g = np.random.default_rng(sd)
-        Lr = int(3.2 * SR)
+        Lr = int(4.0 * SR)
         tr = np.arange(Lr) / SR
-        ir = g.standard_normal(Lr) * np.exp(-tr / 0.42)
-        ir[: int(0.02 * SR)] = 0.0
-        ir = lowpass_fft(ir, 4500.0, order=2)
+        ir = g.standard_normal(Lr) * np.exp(-tr / 0.55)
+        ir[: int(0.025 * SR)] = 0.0
+        ir = lowpass_fft(ir, 6500.0, order=2, highpass=180.0)
         ir /= math.sqrt(float((ir ** 2).sum()))
         N = 1 << int(math.ceil(math.log2(x.size + Lr)))
         return np.fft.irfft(np.fft.rfft(x, N) * np.fft.rfft(ir, N), N)[: x.size]
 
-    mono = (pad + chord)[:, None]
-    dry = plk + fx[:, None] + mono
-    send = plk + 0.5 * fx[:, None] + 0.5 * mono
+    dry = mel + spark + bass + gliss + padl + fx
+    send = 0.55 * mel + 1.0 * spark + 0.1 * bass + 0.7 * gliss + 0.45 * padl + 0.5 * fx
     wet = np.stack([reverb(send[:, 0], 11), reverb(send[:, 1], 12)], axis=1)
-    mix = dry + 0.6 * wet
-
-    fade = np.clip(t / 0.35, 0, 1) * np.clip((dur - t) / 0.6, 0, 1)
-    mix *= fade[:, None]
+    mix = dry + 0.75 * wet
+    mix *= (np.clip(t / 0.25, 0, 1) * np.clip((dur - t) / 0.6, 0, 1))[:, None]
 
     # --- arranque en frio: se oye por adelantado el momento de la divergencia ---
     n0 = int(round(bf.COLD_S * SR))
@@ -172,14 +294,8 @@ def synth(sub, ci, ev, fps, seed=5):
     tc = np.arange(n0) / SR
     cold = mix[a:a + n0] * (np.clip(tc / 0.03, 0, 1) * np.clip((bf.COLD_S - tc) / 0.35, 0, 1))[:, None]
     full = np.concatenate([cold, mix], axis=0)
-    # golpe grave en el corte del adelanto al inicio de la historia
-    th = np.arange(full.shape[0]) / SR - bf.COLD_S
-    onh = (th >= 0) * 1.0
-    dh = np.maximum(th, 0.0)
-    hit = 0.30 * onh * np.sin(2 * math.pi * np.cumsum((44.0 + 50.0 * np.exp(-dh / 0.09)) * onh) / SR) * np.exp(-dh / 0.45)
-    full += hit[:, None]
     full *= 0.89 / float(np.abs(full).max())
-    return full, evs
+    return full, count
 
 
 def write_wav(path, mix):
@@ -206,11 +322,11 @@ def mux(video, wav, out):
 def add_to_video(video, sub, ci, ev, fps, wav=None):
     """Sintetiza la banda sonora y, si se da un video, la mezcla en el."""
     wav = wav or (os.path.splitext(video)[0] + ".wav")
-    mix, evs = synth(sub, ci, ev, fps)
+    mix, count = synth(sub, ci, ev, fps)
     os.makedirs(os.path.dirname(os.path.abspath(wav)) or ".", exist_ok=True)
     write_wav(wav, mix)
     rms = float(np.sqrt((mix ** 2).mean()))
-    print(f"audio: {wav}  {mix.shape[0] / SR:.2f}s  notas {len(evs)}  pico {np.abs(mix).max():.2f}  rms {rms:.3f}")
+    print(f"audio: {wav}  {mix.shape[0] / SR:.2f}s  notas {count}  pico {np.abs(mix).max():.2f}  rms {rms:.3f}")
     if video:
         mux(video, wav, video)
         print("video con audio:", video, f"{os.path.getsize(video) / 1e6:.1f} MB")

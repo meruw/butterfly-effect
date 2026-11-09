@@ -41,7 +41,7 @@ PLUME_STEPS = 2400    # ventana de tiempo de la grafica de pronostico, en pasos
 TEXT = {
     "es": {
         "hook": ["¿Por qué nadie sabe", "si lloverá en diez días?"],
-        "c1": ["1963. Edward Lorenz reduce la convección", "de la atmósfera a tres ecuaciones."],
+        "credit": "MODELO DE CONVECCIÓN DE EDWARD LORENZ · 1963",
         "c2": ["3.000 atmósferas simuladas a la vez,", "cada una de un color."],
         "c2b": ["Diferencia inicial entre ellas:", "una millonésima."],
         "c2c": ["Si un ala es lluvia y la otra sol,", "todas dan el mismo pronóstico."],
@@ -59,7 +59,7 @@ TEXT = {
     },
     "en": {
         "hook": ["Why can't anyone tell you", "if it will rain in ten days?"],
-        "c1": ["1963. Edward Lorenz reduces atmospheric", "convection to three equations."],
+        "credit": "EDWARD LORENZ'S CONVECTION MODEL · 1963",
         "c2": ["3,000 atmospheres simulated at once,", "each one a different color."],
         "c2b": ["Initial difference between them:", "one millionth."],
         "c2c": ["If one wing is rain and the other is sun,", "they all give the same forecast."],
@@ -76,7 +76,7 @@ TEXT = {
         "dec": ".",
     },
 }
-EQUATIONS = ["dx/dt = σ (y − x)", "dy/dt = x (ρ − z) − y", "dz/dt = x y − β z"]
+EQUATIONS = "dx/dt = σ (y − x)        dy/dt = x (ρ − z) − y        dz/dt = x y − β z"
 
 
 def smooth(x):
@@ -312,7 +312,7 @@ def build_schedule(diag, fps, tail_s):
     # en que estuvo por debajo del umbral, no el primero en que lo supera.
     n1 = int(np.nonzero(diag < TH1)[0][-1]) + 1
     n2 = int(np.nonzero(diag < TH2)[0][-1]) + 1 + EXTRA
-    rates = [0.0] * int(round(2.0 * fps))
+    rates = [0.0] * int(round(0.3 * fps))
     ev = {"go": len(rates)}
     rates += ramp(0.0, FAST, 0.9)
     cum = sum(rates)
@@ -718,7 +718,7 @@ def main():
     sans = ["bahnschrift.ttf", "seguisb.ttf", "arial.ttf"]
     f_cap = load_font(serif, px(42))
     f_hook = load_font(serif, px(74))
-    f_eq = load_font(["cambriai.ttf", "timesi.ttf"], px(38))
+    f_eq = load_font(["cambriai.ttf", "timesi.ttf"], px(27))
     f_title = load_font(sans, px(60), "SemiBold")
     f_lab = load_font(sans, px(17), "SemiBold")
     f_pct = load_font(sans, px(46), "SemiBold")
@@ -728,14 +728,15 @@ def main():
 
     cap_y = 0.098 * Hh
     third = (ts - 0.1 - (tg + 1.2)) / 3.0
-    a1 = tg + 1.2
+    a1 = tg + 0.9
     caps = [
-        (make_layer(T["c1"], f_cap, ink), W / 2, cap_y, 0.25, tg + 0.9),
-        (make_layer(EQUATIONS, f_eq, (190, 215, 255), gap=0.12), W / 2, 0.235 * Hh, 0.6, tg + 0.9),
         (make_layer(T["c2"], f_cap, ink), W / 2, cap_y, a1, a1 + third - 0.1),
         (make_layer(T["c2b"], f_cap, ink), W / 2, cap_y, a1 + third, a1 + 2 * third - 0.1),
         (make_layer(T["c2c"], f_cap, ink), W / 2, cap_y, a1 + 2 * third, ts - 0.1),
         (make_layer(T["c3"], f_cap, ink), W / 2, cap_y, ts + 0.1, tb - 0.2),
+        # Las ecuaciones entran aqui, cuando el texto habla de ellas, y no al principio.
+        (make_layer([EQUATIONS], f_eq, (190, 215, 255)), W / 2, 0.168 * Hh, ts + 0.5, tb - 0.2),
+        (make_layer([T["credit"]], f_lab, dim, tracking=trk(2.0), shadow=0.6), W / 2, 0.203 * Hh, ts + 0.7, tb - 0.2),
         (make_layer(T["c4"], f_cap, ink), W / 2, cap_y, tb + 0.3, tf + 2.3),
         (make_layer(T["c5"], f_cap, ink), W / 2, cap_y, tf + 2.9, te - 3.7),
         (make_layer([T["title"]], f_title, ink, tracking=trk(8)), W / 2, 0.088 * Hh, te - 3.3, te + 1.0),

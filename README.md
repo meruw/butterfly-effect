@@ -36,6 +36,10 @@ El número del pie es la separación máxima entre atmósferas, medida en la sim
 
 Cada lanzamiento anota cuánto tiempo siguieron juntas las atmósferas. Al probar varias diferencias aparece el resultado de fondo: hacer la medición inicial mil veces más precisa solo compra unas pocas unidades de tiempo más de pronóstico fiable.
 
+Tocar la mariposa da un aleteo: todas las atmósferas colapsan en una sola luz, desde donde esté una de ellas, y vuelven a separarse. El sonido es opcional y sigue la misma idea que el del video.
+
+En teléfono la simulación y la perilla caben en una pantalla. Para que vaya fluida, la gráfica de pronóstico se dibuja en GPU, mientras las atmósferas coinciden solo se dibujan 64 con más peso (se ven idénticas), las estelas usan menos segmentos en su parte vieja y la cantidad de atmósferas baja sola si el equipo no sostiene el ritmo.
+
 Para publicarla con GitHub Pages basta con servir la carpeta `docs/`. El fuente está en `web/efecto-mariposa.html` y `web/build.py` genera la página independiente.
 
 ## Cómo funciona el render
@@ -49,12 +53,15 @@ Para publicarla con GitHub Pages basta con servir la carpeta `docs/`. El fuente 
 
 ## El sonido también sale de la simulación
 
-`sound.py` hace audibles 20 de las 3.000 atmósferas. Cada vez que una completa una vuelta al atractor suena una nota:
+`sound.py` hace audibles 20 de las 3.000 atmósferas. Cada vez que una completa una vuelta al atractor toca una nota:
 
-- **Altura:** depende de lo alto que llegó esa vuelta (el máximo de `z`), ajustada a una escala pentatónica.
+- **Cuándo:** el instante de la vuelta, ajustado a una rejilla de semicorcheas.
+- **Qué nota:** lo alto que llegó esa vuelta (el máximo de `z`) elige entre las notas del acorde que suena en ese momento.
 - **Lado estéreo:** depende del ala en la que está (el signo de `x`).
 
-Mientras las atmósferas coinciden, las 20 tocan la misma melodía al unísono. Cuando divergen, la melodía se deshace en 20 melodías distintas. El colchón grave, la subida y los golpes son síntesis añadida, no datos.
+Mientras las atmósferas coinciden, las 20 tocan la misma melodía al unísono. Cuando divergen, la melodía se abre en un arpegio de 20 voces. Los destellos agudos marcan cada cambio de ala de las voces principales.
+
+La progresión de acordes en re mayor, el bajo, el colchón y el glissando de arpa que sube hasta el momento de la divergencia son composición, no datos.
 
 ## Uso
 
@@ -69,7 +76,7 @@ python butterfly.py --out out/efecto_mariposa.mp4
 Ese comando renderiza el video, sintetiza el audio y lo mezcla. Para probar cambios rápido, fotogramas sueltos a media resolución:
 
 ```bash
-python butterfly.py --scale 0.5 --stills 0,9,16.4,27.6
+python butterfly.py --scale 0.5 --stills 0,6,14,25
 ```
 
 | Opción | Qué hace | Valor por defecto |
