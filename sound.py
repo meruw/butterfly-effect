@@ -165,8 +165,21 @@ def synth(sub, ci, ev, fps, seed=5):
 
     fade = np.clip(t / 0.35, 0, 1) * np.clip((dur - t) / 0.6, 0, 1)
     mix *= fade[:, None]
-    mix *= 0.89 / float(np.abs(mix).max())
-    return mix, evs
+
+    # --- arranque en frio: se oye por adelantado el momento de la divergencia ---
+    n0 = int(round(bf.COLD_S * SR))
+    a = int(round((tb + bf.COLD_AT) * SR))
+    tc = np.arange(n0) / SR
+    cold = mix[a:a + n0] * (np.clip(tc / 0.03, 0, 1) * np.clip((bf.COLD_S - tc) / 0.35, 0, 1))[:, None]
+    full = np.concatenate([cold, mix], axis=0)
+    # golpe grave en el corte del adelanto al inicio de la historia
+    th = np.arange(full.shape[0]) / SR - bf.COLD_S
+    onh = (th >= 0) * 1.0
+    dh = np.maximum(th, 0.0)
+    hit = 0.30 * onh * np.sin(2 * math.pi * np.cumsum((44.0 + 50.0 * np.exp(-dh / 0.09)) * onh) / SR) * np.exp(-dh / 0.45)
+    full += hit[:, None]
+    full *= 0.89 / float(np.abs(full).max())
+    return full, evs
 
 
 def write_wav(path, mix):
@@ -190,6 +203,19 @@ def mux(video, wav, out):
     os.replace(tmp, out)
 
 
+def add_to_video(video, sub, ci, ev, fps, wav=None):
+    """Sintetiza la banda sonora y, si se da un video, la mezcla en el."""
+    wav = wav or (os.path.splitext(video)[0] + ".wav")
+    mix, evs = synth(sub, ci, ev, fps)
+    os.makedirs(os.path.dirname(os.path.abspath(wav)) or ".", exist_ok=True)
+    write_wav(wav, mix)
+    rms = float(np.sqrt((mix ** 2).mean()))
+    print(f"audio: {wav}  {mix.shape[0] / SR:.2f}s  notas {len(evs)}  pico {np.abs(mix).max():.2f}  rms {rms:.3f}")
+    if video:
+        mux(video, wav, video)
+        print("video con audio:", video, f"{os.path.getsize(video) / 1e6:.1f} MB")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--video", default="", help="MP4 al que se le agrega el audio (se reemplaza)")
@@ -199,16 +225,9 @@ def main():
     args = ap.parse_args()
 
     x0 = bf.find_start()
-    diag, cent, sub = bf.presim(x0, 26000)
+    diag, cent, sub, frac = bf.presim(x0, 26000)
     nsub, ci, ev = bf.build_schedule(diag, args.fps, args.tail)
-    mix, evs = synth(sub, ci, ev, args.fps)
-    os.makedirs(os.path.dirname(os.path.abspath(args.wav)) or ".", exist_ok=True)
-    write_wav(args.wav, mix)
-    rms = float(np.sqrt((mix ** 2).mean()))
-    print(f"audio: {args.wav}  {mix.shape[0] / SR:.2f}s  notas {len(evs)}  pico {np.abs(mix).max():.2f}  rms {rms:.3f}")
-    if args.video:
-        mux(args.video, args.wav, args.video)
-        print("video con audio:", args.video, f"{os.path.getsize(args.video) / 1e6:.1f} MB")
+    add_to_video(args.video, sub, ci, ev, args.fps, wav=args.wav)
 
 
 if __name__ == "__main__":
