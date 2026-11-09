@@ -34,6 +34,15 @@ El número de la esquina superior es la separación máxima real entre atmósfer
 - **Revelado:** exposición automática, curva logarítmica, resplandor y viñeta.
 - **Rendimiento:** las partículas se reparten entre 8 procesos y se procesan en bloques de 4.096 que caben en caché. No usa GPU y corre con prioridad baja.
 
+## El sonido también sale de la simulación
+
+`sound.py` hace audibles 20 de las 3.000 atmósferas. Cada vez que una completa una vuelta al atractor suena una nota:
+
+- **Altura:** depende de lo alto que llegó esa vuelta (el máximo de `z`), ajustada a una escala pentatónica.
+- **Lado estéreo:** depende del ala en la que está (el signo de `x`).
+
+Mientras las atmósferas coinciden, las 20 tocan la misma melodía al unísono. Cuando divergen, la melodía se deshace en 20 melodías distintas. El colchón grave, la subida y el golpe del momento en que la luz se abre son síntesis añadida, no datos.
+
 ## Uso
 
 ```bash
@@ -43,6 +52,12 @@ pip install -r requirements.txt
 ```bash
 python butterfly.py --out out/efecto_mariposa.mp4
 ```
+
+```bash
+python sound.py --video out/efecto_mariposa.mp4
+```
+
+El segundo comando sintetiza el audio y lo mezcla en el MP4. Si cambias `--fps` o `--tail` en el render, pasa los mismos valores a `sound.py`.
 
 Fotogramas sueltos a media resolución, para probar cambios rápido:
 
