@@ -3,9 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Basta un aleteo para que el mañana sea otro. 2.000 atmósferas del modelo de Lorenz, en vivo: elige la diferencia inicial, toca la mariposa y escucha el tema que toca.">
+<meta name="theme-color" content="#05060d">
+<link rel="canonical" href="https://chaos.meruw.dev/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2305060d'/%3E%3Cpath d='M16 20C9 6 3 9 4 16s8 9 12 4c4 5 11 3 12-4S23 6 16 20Z' fill='none' stroke='%23eceaf2' stroke-width='1.8'/%3E%3Ccircle cx='16' cy='20' r='2' fill='%23ffce70'/%3E%3C/svg%3E">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://chaos.meruw.dev/">
+<meta property="og:title" content="Efecto mariposa">
+<meta property="og:description" content="Basta un aleteo para que el mañana sea otro. 2.000 atmósferas del modelo de Lorenz, en vivo: elige la diferencia inicial, toca la mariposa y escucha el tema que toca.">
+<meta property="og:image" content="https://chaos.meruw.dev/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Efecto mariposa">
+<meta name="twitter:description" content="Basta un aleteo para que el mañana sea otro. 2.000 atmósferas del modelo de Lorenz, en vivo: elige la diferencia inicial, toca la mariposa y escucha el tema que toca.">
+<meta name="twitter:image" content="https://chaos.meruw.dev/og.png">
 <style>body{margin:0}[hidden]{display:none!important}</style>
-</head>
-<body>
 <title>Efecto mariposa</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -144,7 +157,8 @@ button[aria-pressed="true"] { border-color: var(--ink); }
 }
 @media (prefers-reduced-motion: reduce) { .hint, .say, .intro, .panel, .head p, .plume-label, .odds { transition: none; } }
 </style>
-
+</head>
+<body>
 <div class="app intro-on intro-landing" id="app">
   <section class="stage" aria-label="Simulación">
     <canvas id="gl" aria-label="Atractor de Lorenz con todas las atmósferas simuladas y, debajo, la posición de cada una en el tiempo"></canvas>

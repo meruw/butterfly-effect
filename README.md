@@ -1,6 +1,8 @@
 # El efecto mariposa
 
-¿Por qué nadie sabe si lloverá en diez días? 3.000 atmósferas simuladas a la vez con el modelo de Lorenz (1963), en un video renderizado por completo en CPU y en una versión web interactiva.
+Basta un aleteo para que el mañana sea otro. 3.000 atmósferas simuladas a la vez con el modelo de Lorenz (1963), en un video renderizado por completo en CPU y en una versión web interactiva.
+
+**Versión interactiva:** https://chaos.meruw.dev
 
 ![La luz blanca se abre en un espectro cuando las atmósferas divergen](media/divergencia.png)
 
@@ -46,7 +48,7 @@ La página está en español y en inglés, con un botón para cambiar.
 
 En teléfono la simulación y la perilla caben en una pantalla. Para que vaya fluida, la gráfica de pronóstico se dibuja en GPU, mientras las atmósferas coinciden solo se dibujan 64 con más peso (se ven idénticas), las estelas usan menos segmentos en su parte vieja y la cantidad de atmósferas baja sola si el equipo no sostiene el ritmo.
 
-Para publicarla con GitHub Pages basta con servir la carpeta `docs/`. El fuente está en `web/efecto-mariposa.html` y `web/build.py` genera la página independiente.
+El fuente está en `web/efecto-mariposa.html`. `web/build.py` genera `docs/`, que es lo que publica GitHub Pages: la página independiente con las etiquetas de vista previa para redes y el archivo `CNAME` del dominio. `web/make_og.py` compone la imagen de vista previa a partir de un fotograma del video.
 
 ## Cómo funciona el render
 

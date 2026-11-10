@@ -42,7 +42,7 @@ PLUME_STEPS = 2400    # ventana de tiempo de la grafica de pronostico, en pasos
 
 TEXT = {
     "es": {
-        "hook": ["¿Por qué nadie sabe", "si lloverá en diez días?"],
+        "hook": ["Basta un aleteo para que", "el mañana sea otro."],
         "credit": "MODELO DE CONVECCIÓN DE EDWARD LORENZ · 1963",
         "c2": ["3.000 atmósferas simuladas a la vez,", "cada una de un color."],
         "c2b": ["Diferencia inicial entre ellas:", "una millonésima."],
@@ -60,7 +60,7 @@ TEXT = {
         "dec": ",",
     },
     "en": {
-        "hook": ["Why can't anyone tell you", "if it will rain in ten days?"],
+        "hook": ["One wingbeat is enough", "to change tomorrow."],
         "credit": "EDWARD LORENZ'S CONVECTION MODEL · 1963",
         "c2": ["3,000 atmospheres simulated at once,", "each one a different color."],
         "c2b": ["Initial difference between them:", "one millionth."],
