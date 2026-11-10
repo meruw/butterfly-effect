@@ -44,7 +44,7 @@ body { background: var(--bg); color: var(--ink); font: 400 14.5px/1.5 var(--body
   padding-left: max(var(--gut), env(safe-area-inset-left, 0px)); padding-right: max(var(--gut), env(safe-area-inset-right, 0px));
 }
 .head h1 { margin: 0; font: 400 clamp(28px, 4.2vw, 46px)/1 var(--display); letter-spacing: 0.005em; }
-.head p { margin: 7px 0 0; max-width: 42ch; color: var(--muted); text-wrap: pretty; }
+.head p { margin: 7px 0 0; max-width: min(42ch, calc(100% - 64px)); color: var(--muted); text-wrap: pretty; }
 .say {
   position: absolute; left: 50%; bottom: calc(var(--plume-h) + 72px); transform: translateX(-50%);
   width: min(88%, 26ch); margin: 0; text-align: center; pointer-events: none;
@@ -71,6 +71,10 @@ body { background: var(--bg); color: var(--ink); font: 400 14.5px/1.5 var(--body
 .odds dd { margin: 0; font: 500 28px/1 var(--mono); font-variant-numeric: tabular-nums; }
 .odds .rain { color: var(--rain); }
 .odds .sun { color: var(--sun); }
+.lang {
+  position: absolute; top: 14px; right: max(var(--gut), env(safe-area-inset-right, 0px)); min-height: 36px; padding: 0 11px;
+  font: 500 12px/1 var(--mono); letter-spacing: 0.12em; background: var(--bg);
+}
 .nogl { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: var(--muted); }
 
 .panel {
@@ -124,49 +128,51 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   <section class="stage" aria-label="Simulación">
     <canvas id="gl" aria-label="Atractor de Lorenz con todas las atmósferas simuladas y, debajo, la posición de cada una en el tiempo"></canvas>
     <header class="head">
-      <h1>Efecto mariposa</h1>
-      <p>Todas estas atmósferas salen casi del mismo punto. Toca la mariposa para dar un aleteo.</p>
+      <h1 data-t="h1">Efecto mariposa</h1>
+      <p data-t="tagline">Todas estas atmósferas salen casi del mismo punto. Toca la mariposa para dar un aleteo.</p>
     </header>
+    <button class="lang" id="lang" type="button" aria-label="Switch to English">EN</button>
     <p class="say" id="say" aria-live="polite"></p>
-    <div class="label plume-label">Pronóstico por conjuntos<span class="wide"> · una línea por atmósfera</span></div>
-    <div class="label hint" id="hint">Arrastra para girar</div>
+    <div class="label plume-label"><span data-t="plume">Pronóstico por conjuntos</span><span class="wide" data-t="plumeWide"> · una línea por atmósfera</span></div>
+    <div class="label hint" id="hint" data-t="hint">Arrastra para girar</div>
     <div class="plume-slot" id="slot"></div>
     <dl class="odds">
-      <div class="rain"><dt>Lluvia</dt><dd id="rain">100 %</dd></div>
-      <div class="sun"><dt>Sol</dt><dd id="sun">0 %</dd></div>
+      <div class="rain"><dt data-t="rain">Lluvia</dt><dd id="rain">100 %</dd></div>
+      <div class="sun"><dt data-t="sun">Sol</dt><dd id="sun">0 %</dd></div>
     </dl>
-    <div class="nogl" id="nogl" hidden>Este navegador no tiene WebGL 2, que hace falta para dibujar la simulación.</div>
+    <div class="nogl" id="nogl" data-t="nogl" hidden>Este navegador no tiene WebGL 2, que hace falta para dibujar la simulación.</div>
   </section>
 
   <aside class="panel" aria-label="Controles y lecturas">
     <div class="group">
-      <label class="label" for="eps">Diferencia inicial entre atmósferas</label>
+      <label class="label" for="eps" data-t="epsLabel">Diferencia inicial entre atmósferas</label>
       <div class="knob-value"><output id="epsNum" for="eps">0,000001</output><span id="epsName">una millonésima</span></div>
       <input type="range" id="eps" min="-12" max="-1" step="1" value="-6">
-      <div class="scale"><span>una billonésima</span><span>una décima</span></div>
+      <div class="scale"><span data-t="scaleMin">una billonésima</span><span data-t="scaleMax">una décima</span></div>
       <div class="buttons">
-        <button class="primary" id="launch" type="button">Lanzar de nuevo</button>
+        <button class="primary" id="launch" type="button" data-t="launch">Lanzar de nuevo</button>
         <button id="sound" type="button" aria-pressed="false">Sonido</button>
         <button id="pause" type="button">Pausar</button>
       </div>
+      <p class="note" id="song"></p>
     </div>
 
     <div class="group">
       <dl class="readouts">
-        <div><dt>Separación ahora</dt><dd id="sep">0,000001</dd></div>
-        <div><dt>Juntas durante</dt><dd id="horizon">0,0</dd><small id="horizonNote">tiempo del modelo, contando</small></div>
+        <div><dt data-t="sepNow">Separación ahora</dt><dd id="sep">0,000001</dd></div>
+        <div><dt data-t="together">Juntas durante</dt><dd id="horizon">0,0</dd><small id="horizonNote">tiempo del modelo, contando</small></div>
       </dl>
     </div>
 
     <div class="group">
-      <div class="label">Tu experimento</div>
-      <p class="note">Vertical: cuánto tiempo siguieron juntas. Horizontal: la diferencia inicial. Los puntos huecos son aleteos, que salen desde otro lugar.</p>
+      <div class="label" data-t="experiment">Tu experimento</div>
+      <p class="note" data-t="chartNote">Vertical: cuánto tiempo siguieron juntas. Horizontal: la diferencia inicial. Los puntos huecos son aleteos, que salen desde otro lugar.</p>
       <canvas id="chart" aria-label="Tiempo que las atmósferas siguieron juntas según la diferencia inicial"></canvas>
       <p class="insight" id="insight" aria-live="polite">Cuando las atmósferas se separen, aquí queda anotado cuánto aguantaron juntas.</p>
     </div>
 
     <div class="group">
-      <p class="note">Es el modelo de convección que Edward Lorenz publicó en 1963. Cada color es una atmósfera; superpuestas se ven blancas. Si un ala fuera lluvia y la otra sol, el marcador sería el pronóstico: cuántas de las atmósferas simuladas acaban en cada una.</p>
+      <p class="note" data-t="about">Es el modelo de convección que Edward Lorenz publicó en 1963. Cada color es una atmósfera; superpuestas se ven blancas. Si un ala fuera lluvia y la otra sol, el marcador sería el pronóstico: cuántas de las atmósferas simuladas acaban en cada una.</p>
     </div>
   </aside>
 </div>
@@ -491,14 +497,14 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     born = abs; cohRow = abs - T; flap = false; ref = 0.02 * NREF;
     for (let r = 0; r < (preroll || 0); r++) { stepAll(H, nMax); simT += H; pushRow(); }
     measure(); events(); readouts(); drawChart();
-    say("Todas juntas: una sola luz.");
+    say(t("sayLaunch"));
   }
   // Aleteo: todas las atmósferas vuelven a juntarse donde está una de ellas y salen de nuevo.
   function aleteo(u, v) {
     seed(X[leader], Y[leader], Z[leader]);
     cohRow = abs; flap = true; tap = [u, v, 0];
     measure(); readouts();
-    say("Un aleteo de " + NAMES[exp10] + ".");
+    say(t("sayFlap")(t("names")[exp10]));
     music.flap();
     buzz(12);
   }
@@ -507,27 +513,86 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     try { if (navigator.vibrate && navigator.userActivation && navigator.userActivation.hasBeenActive) navigator.vibrate(ms); } catch (e) { /* sin vibración */ }
   }
   function events() {
-    if (tSlow === null && sep > 0.5) { tSlow = simT; say("Empiezan a separarse."); }
+    if (tSlow === null && sep > 0.5) { tSlow = simT; say(t("saySlow")); }
     if (tBurst === null && sep > 15) {
       tBurst = simT;
       const uv = toUv(cen[0], cen[1], cen[2]); shock = [uv[0], uv[1], 0];
-      say("Aquí se acaba el pronóstico.");
+      say(t("sayBurst"));
       music.burst();
       buzz(28);
     }
     if (horizon === null && sep > 1) { horizon = simT; runs.push({ e: exp10, t: horizon, flap }); drawChart(); insight(); }
   }
 
-  // ---------- textos ----------
-  const NAMES = { "-1": "una décima", "-2": "una centésima", "-3": "una milésima", "-4": "una diezmilésima", "-5": "una cienmilésima", "-6": "una millonésima", "-7": "una diezmillonésima", "-8": "una cienmillonésima", "-9": "una milmillonésima", "-10": "una diezmilmillonésima", "-11": "una cienmilmillonésima", "-12": "una billonésima" };
-  const fix = (v, d) => v.toFixed(d).replace(".", ",");
+  // ---------- textos, en español y en inglés ----------
+  const L = {
+    es: {
+      h1: "Efecto mariposa",
+      tagline: "Todas estas atmósferas salen casi del mismo punto. Toca la mariposa para dar un aleteo.",
+      plume: "Pronóstico por conjuntos", plumeWide: " · una línea por atmósfera", hint: "Arrastra para girar",
+      rain: "Lluvia", sun: "Sol",
+      nogl: "Este navegador no tiene WebGL 2, que hace falta para dibujar la simulación.",
+      epsLabel: "Diferencia inicial entre atmósferas", scaleMin: "una billonésima", scaleMax: "una décima",
+      launch: "Lanzar de nuevo", sound: "Sonido", mute: "Silenciar", pause: "Pausar", resume: "Reanudar",
+      sepNow: "Separación ahora", together: "Juntas durante",
+      counting: "tiempo del modelo, contando", done: "tiempo del modelo hasta separarse",
+      experiment: "Tu experimento",
+      chartNote: "Vertical: cuánto tiempo siguieron juntas. Horizontal: la diferencia inicial. Los puntos huecos son aleteos, que salen desde otro lugar.",
+      insight0: "Cuando las atmósferas se separen, aquí queda anotado cuánto aguantaron juntas.",
+      insight1: (name, time) => `Con una diferencia de ${name}, las atmósferas siguieron juntas ${time} unidades de tiempo. Prueba otra diferencia y compara.`,
+      insight2: (x) => `En tus pruebas, hacer la diferencia inicial 1.000 veces más pequeña solo dio ${x} unidades de tiempo más de pronóstico fiable.`,
+      about: "Es el modelo de convección que Edward Lorenz publicó en 1963. Cada color es una atmósfera; superpuestas se ven blancas. Si un ala fuera lluvia y la otra sol, el marcador sería el pronóstico: cuántas de las atmósferas simuladas acaban en cada una.",
+      sayLaunch: "Todas juntas: una sola luz.", saySlow: "Empiezan a separarse.", sayBurst: "Aquí se acaba el pronóstico.",
+      sayFlap: (name) => `Un aleteo de ${name}.`,
+      song: (key, hi, lo) => `Canción de esta diferencia: ${key}, con ${hi} y ${lo}. Cada giro toca una nota y cada cambio de ala cambia el acorde. El zoom, la rotación y la separación cambian cómo suena.`,
+      notes: ["Do", "Do♯", "Re", "Mi♭", "Mi", "Fa", "Fa♯", "Sol", "La♭", "La", "Si♭", "Si"],
+      modes: { lyd: "lidio", ion: "mayor", mix: "mixolidio", dor: "dórico", aeo: "menor", phr: "frigio", har: "menor armónico" },
+      timbres: { celesta: "celesta", harp: "arpa", glass: "cristal", marimba: "marimba", box: "caja de música", dark: "cuerdas graves" },
+      names: { "-1": "una décima", "-2": "una centésima", "-3": "una milésima", "-4": "una diezmilésima", "-5": "una cienmilésima", "-6": "una millonésima", "-7": "una diezmillonésima", "-8": "una cienmillonésima", "-9": "una milmillonésima", "-10": "una diezmilmillonésima", "-11": "una cienmilmillonésima", "-12": "una billonésima" },
+      axis: ["billonésima", "millonésima", "décima"], dec: ",", other: "EN", otherAria: "Switch to English",
+    },
+    en: {
+      h1: "Butterfly Effect",
+      tagline: "All these atmospheres start from almost the same point. Tap the butterfly to flap its wings.",
+      plume: "Ensemble forecast", plumeWide: " · one line per atmosphere", hint: "Drag to rotate",
+      rain: "Rain", sun: "Sun",
+      nogl: "This browser does not have WebGL 2, which is needed to draw the simulation.",
+      epsLabel: "Initial difference between atmospheres", scaleMin: "one trillionth", scaleMax: "one tenth",
+      launch: "Launch again", sound: "Sound", mute: "Mute", pause: "Pause", resume: "Resume",
+      sepNow: "Separation now", together: "Together for",
+      counting: "model time, counting", done: "model time until they split",
+      experiment: "Your experiment",
+      chartNote: "Vertical: how long they stayed together. Horizontal: the initial difference. Hollow dots are wing flaps, which start somewhere else.",
+      insight0: "When the atmospheres split, how long they held together is logged here.",
+      insight1: (name, time) => `With a difference of ${name}, the atmospheres stayed together for ${time} time units. Try another difference and compare.`,
+      insight2: (x) => `In your runs, making the initial difference 1,000 times smaller only bought ${x} more time units of reliable forecast.`,
+      about: "This is the convection model Edward Lorenz published in 1963. Each color is one atmosphere; stacked together they look white. If one wing were rain and the other sun, the counter would be the forecast: how many of the simulated atmospheres end up on each.",
+      sayLaunch: "All together: a single light.", saySlow: "They start to drift apart.", sayBurst: "The forecast ends here.",
+      sayFlap: (name) => `A wing flap of ${name}.`,
+      song: (key, hi, lo) => `This difference's song: ${key}, on ${hi} and ${lo}. Every loop plays a note and every wing change shifts the chord. Zoom, rotation and separation change how it sounds.`,
+      notes: ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"],
+      modes: { lyd: "Lydian", ion: "major", mix: "Mixolydian", dor: "Dorian", aeo: "minor", phr: "Phrygian", har: "harmonic minor" },
+      timbres: { celesta: "celesta", harp: "harp", glass: "glass", marimba: "marimba", box: "music box", dark: "low strings" },
+      names: { "-1": "one tenth", "-2": "one hundredth", "-3": "one thousandth", "-4": "one ten-thousandth", "-5": "one hundred-thousandth", "-6": "one millionth", "-7": "one ten-millionth", "-8": "one hundred-millionth", "-9": "one billionth", "-10": "one ten-billionth", "-11": "one hundred-billionth", "-12": "one trillionth" },
+      axis: ["trillionth", "millionth", "tenth"], dec: ".", other: "ES", otherAria: "Cambiar a español",
+    },
+  };
+  let lang = "";
+  try { lang = localStorage.getItem("mariposa-idioma") || ""; } catch (e) { lang = ""; }
+  if (lang !== "es" && lang !== "en") lang = (navigator.language || "es").toLowerCase().startsWith("es") ? "es" : "en";
+  const t = (k) => L[lang][k];
+  const fix = (v, d) => v.toFixed(d).replace(".", t("dec"));
   let sayTimer = 0;
   function say(text) { const el = $("say"); el.textContent = text; el.classList.add("on"); clearTimeout(sayTimer); sayTimer = setTimeout(() => el.classList.remove("on"), 2600); }
-  function knob() { $("epsNum").textContent = fix(Math.pow(10, exp10), -exp10); $("epsName").textContent = NAMES[exp10]; }
+  function knob() { $("epsNum").textContent = fix(Math.pow(10, exp10), -exp10); $("epsName").textContent = t("names")[exp10]; }
+  function songLine() {
+    const s = music.song(), tm = t("timbres");
+    $("song").textContent = t("song")(t("notes")[s[0]] + " " + t("modes")[s[1]], tm[s[4]], tm[s[5]]);
+  }
   function readouts() {
     $("sep").textContent = fix(sep, 6);
     $("horizon").textContent = fix(horizon === null ? simT : horizon, 1);
-    $("horizonNote").textContent = horizon === null ? "tiempo del modelo, contando" : "tiempo del modelo hasta separarse";
+    $("horizonNote").textContent = horizon === null ? t("counting") : t("done");
     const p = Math.round(rain * 100);
     $("rain").textContent = p + " %"; $("sun").textContent = (100 - p) + " %";
   }
@@ -541,9 +606,17 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     const m = a / b; return { m, c: my - m * mx };
   }
   function insight() {
-    const f = fit(), el = $("insight");
-    if (!f) { el.textContent = `Con una diferencia de ${NAMES[exp10]}, las atmósferas siguieron juntas ${fix(horizon, 1)} unidades de tiempo. Prueba otra diferencia y compara.`; return; }
-    el.textContent = `En tus pruebas, hacer la diferencia inicial 1.000 veces más pequeña solo dio ${fix(Math.abs(f.m) * 3, 1)} unidades de tiempo más de pronóstico fiable.`;
+    const f = fit(), el = $("insight"), last = runs[runs.length - 1];
+    if (!last) { el.textContent = t("insight0"); return; }
+    el.textContent = f ? t("insight2")(fix(Math.abs(f.m) * 3, 1)) : t("insight1")(t("names")[last.e], fix(last.t, 1));
+  }
+  function applyLang() {
+    document.documentElement.lang = lang; document.title = t("h1");
+    document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = t(el.dataset.t); });
+    $("lang").textContent = t("other"); $("lang").setAttribute("aria-label", t("otherAria"));
+    $("pause").textContent = paused ? t("resume") : t("pause");
+    $("sound").textContent = $("sound").getAttribute("aria-pressed") === "true" ? t("mute") : t("sound");
+    knob(); songLine(); readouts(); insight(); drawChart();
   }
 
   // ---------- gráfica del experimento ----------
@@ -560,24 +633,60 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     cctx.textAlign = "right"; cctx.textBaseline = "middle";
     for (const t of [0, 20, 40]) { cctx.beginPath(); cctx.moveTo(L, py(t)); cctx.lineTo(w - R, py(t)); cctx.stroke(); cctx.fillText(String(t), L - 6 * dpr, py(t)); }
     cctx.textBaseline = "alphabetic";
-    for (const [e, label, align] of [[-12, "billonésima", "left"], [-6, "millonésima", "center"], [-1, "décima", "right"]]) { cctx.textAlign = align; cctx.fillText(label, px(e), h - 5 * dpr); }
+    const ax = t("axis");
+    for (const [e, label, align] of [[-12, ax[0], "left"], [-6, ax[1], "center"], [-1, ax[2], "right"]]) { cctx.textAlign = align; cctx.fillText(label, px(e), h - 5 * dpr); }
     const f = fit();
     if (f) { cctx.strokeStyle = muted; cctx.setLineDash([4 * dpr, 4 * dpr]); cctx.beginPath(); cctx.moveTo(px(-12), py(f.m * -12 + f.c)); cctx.lineTo(px(-1), py(f.m * -1 + f.c)); cctx.stroke(); cctx.setLineDash([]); }
     cctx.fillStyle = ink; cctx.strokeStyle = ink; cctx.lineWidth = 1.4 * dpr;
     for (const r of runs) { cctx.beginPath(); cctx.arc(px(r.e), py(r.t), 3.4 * dpr, 0, 7); if (r.flap) cctx.stroke(); else cctx.fill(); }
   }
 
-  // ---------- música: la simulación toca, la armonía la ordena ----------
-  // Ocho atmósferas suenan. Cada vuelta al atractor dispara una nota en la siguiente
-  // semicorchea; el máximo de z elige entre las notas del acorde y el ala decide el lado.
+  // ---------- música: la mariposa toca ----------
+  // Ocho atmósferas suenan, y cada giro se oye en el momento en que ocurre: una nota aguda en
+  // lo alto de la vuelta y una grave en lo bajo. Cada ala tiene su instrumento y su lado, y
+  // cada cambio de ala cambia el acorde y trae una nota de bajo.
+  // Cada diferencia inicial tiene su canción (tonalidad, modo y timbres). El zoom la hace más
+  // íntima o más lejana, el giro de la cámara mueve las alas en el estéreo y la separación
+  // entre atmósferas alarga el eco.
   const music = (() => {
-    const BEAT = 60 / 96, S16 = BEAT / 4, BAR = BEAT * 4, V = 8;
-    const CYC = [{ bass: 38, pcs: [2, 6, 9, 4] }, { bass: 33, pcs: [9, 1, 4, 11] }, { bass: 35, pcs: [11, 2, 6, 9] }, { bass: 31, pcs: [7, 11, 2, 9] }];
+    const V = 8, LEADS = 3;
+    const MODES = { lyd: [0, 2, 4, 6, 7, 9, 11], ion: [0, 2, 4, 5, 7, 9, 11], mix: [0, 2, 4, 5, 7, 9, 10], dor: [0, 2, 3, 5, 7, 9, 10], aeo: [0, 2, 3, 5, 7, 8, 10], phr: [0, 1, 3, 5, 7, 8, 10], har: [0, 2, 3, 5, 7, 8, 11] };
+    // raíz, modo, grados del ala derecha, grados del ala izquierda, timbre derecho, timbre izquierdo
+    const SONGS = {
+      "-12": [2, "lyd", [0, 1], [5, 2], "glass", "harp"],
+      "-11": [9, "ion", [0, 4], [5, 3], "celesta", "harp"],
+      "-10": [4, "mix", [0, 6], [4, 3], "marimba", "harp"],
+      "-9": [7, "ion", [0, 4], [5, 3], "box", "harp"],
+      "-8": [0, "lyd", [0, 1], [5, 2], "glass", "marimba"],
+      "-7": [5, "ion", [0, 4], [5, 3], "celesta", "marimba"],
+      "-6": [2, "ion", [0, 4], [5, 3], "celesta", "harp"],
+      "-5": [11, "dor", [2, 6], [0, 3], "box", "harp"],
+      "-4": [4, "dor", [2, 6], [0, 3], "marimba", "harp"],
+      "-3": [9, "aeo", [2, 6], [0, 3], "celesta", "dark"],
+      "-2": [6, "phr", [2, 6], [0, 1], "glass", "dark"],
+      "-1": [0, "har", [5, 4], [0, 3], "box", "dark"],
+    };
+    // tipo de onda, caída en s, octava, parciales extra [razón, amplitud, caída]
+    const TIMBRES = {
+      celesta: ["sine", 0.95, 0, [[4, 0.16, 0.12]]],
+      harp: ["triangle", 1.0, 0, []],
+      glass: ["sine", 1.5, 0, [[3, 0.2, 0.9]]],
+      marimba: ["triangle", 0.4, 0, [[4, 0.3, 0.06]]],
+      box: ["sine", 0.8, 0, [[2, 0.35, 0.5], [5.42, 0.1, 0.05]]],
+      dark: ["triangle", 1.3, -1, []],
+      bass: ["triangle", 1.3, 0, []],
+      spark: ["sine", 0.5, 0, []],
+    };
     const za = new Float64Array(V), zb = new Float64Array(V), xs = new Float64Array(V);
-    const pending = [], used = new Map();
-    let ctx = null, on = false, master, dry, send, pad = [], nextBar = 0;
+    const visits = Array.from({ length: V }, () => [0, 0]);
+    const pending = [];
+    let ctx = null, on = false, master, dry, send, toneLP, wetG, fbG, pad = [], song = SONGS["-6"], lastNote = 0, leadChord = null;
     const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
-    const chordAt = (t) => CYC[Math.floor(t / BAR) % 4];
+    function chord(wing, k) {
+      const sc = MODES[song[1]], d = (wing > 0 ? song[2] : song[3])[k % 2];
+      const pc = (i) => (song[0] + sc[(d + i) % 7]) % 12;
+      return { pcs: [pc(0), pc(2), pc(4), pc(1)], bass: 36 + pc(0) };
+    }
     const pool = (ch, lo, hi) => { const o = []; for (let m = lo; m <= hi; m++) if (ch.pcs.includes(m % 12)) o.push(m); return o; };
 
     function init() {
@@ -586,91 +695,101 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       ctx = new AC();
       master = ctx.createGain(); master.gain.value = 0;
       const comp = ctx.createDynamicsCompressor(); master.connect(comp); comp.connect(ctx.destination);
-      dry = ctx.createGain(); dry.connect(master);
+      toneLP = ctx.createBiquadFilter(); toneLP.type = "lowpass"; toneLP.frequency.value = 6000; toneLP.connect(master);
+      dry = ctx.createGain(); dry.connect(toneLP);
       send = ctx.createGain();
-      const dl = ctx.createDelay(1), fb = ctx.createGain(), lp = ctx.createBiquadFilter(), wet = ctx.createGain();
-      dl.delayTime.value = BEAT * 0.75; fb.gain.value = 0.38; lp.type = "lowpass"; lp.frequency.value = 3600; wet.gain.value = 0.45;
-      send.connect(dl); dl.connect(lp); lp.connect(fb); fb.connect(dl); lp.connect(wet); wet.connect(master);
+      const dl = ctx.createDelay(1), lp = ctx.createBiquadFilter();
+      fbG = ctx.createGain(); wetG = ctx.createGain();
+      dl.delayTime.value = 0.42; fbG.gain.value = 0.3; lp.type = "lowpass"; lp.frequency.value = 3600; wetG.gain.value = 0.4;
+      send.connect(dl); dl.connect(lp); lp.connect(fbG); fbG.connect(dl); lp.connect(wetG); wetG.connect(toneLP);
       if (!mobile) {                      // reverberación solo donde sobra potencia
         const len = Math.floor(ctx.sampleRate * 2.6), ir = ctx.createBuffer(2, len, ctx.sampleRate);
         for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.5)); }
-        const cv = ctx.createConvolver(), cg = ctx.createGain(); cv.buffer = ir; cg.gain.value = 0.16; send.connect(cv); cv.connect(cg); cg.connect(master);
+        const cv = ctx.createConvolver(), cg = ctx.createGain(); cv.buffer = ir; cg.gain.value = 0.4; send.connect(cv); cv.connect(cg); cg.connect(wetG);
       }
-      const plp = ctx.createBiquadFilter(); plp.type = "lowpass"; plp.frequency.value = 850; plp.connect(master); plp.connect(send);
-      for (let i = 0; i < 3; i++) { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = "triangle"; g.gain.value = 0.045; o.connect(g); g.connect(plp); o.start(); pad.push(o); }
-      nextBar = Math.ceil(ctx.currentTime / BAR) * BAR;
+      const plp = ctx.createBiquadFilter(); plp.type = "lowpass"; plp.frequency.value = 850; plp.connect(dry); plp.connect(send);
+      for (let i = 0; i < 3; i++) { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = "triangle"; g.gain.value = 0.04; o.connect(g); g.connect(plp); o.start(); pad.push(o); }
       return true;
     }
     function voice(t, midi, gain, pan, kind) {
-      const dec = kind === "bass" ? 1.3 : kind === "spark" ? 0.5 : 0.95;
+      const [type, dec, oct, parts] = TIMBRES[kind], f = hz(midi + 12 * oct);
       const g = ctx.createGain();
       g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(gain, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t + dec);
-      const o = ctx.createOscillator(); o.type = kind === "harp" || kind === "bass" ? "triangle" : "sine"; o.frequency.value = hz(midi); o.connect(g);
-      o.start(t); o.stop(t + dec + 0.05);
-      if (kind === "celesta") {            // parcial agudo corto: el golpe de la celesta
-        const o2 = ctx.createOscillator(), g2 = ctx.createGain(); o2.frequency.value = hz(midi) * 4;
-        g2.gain.setValueAtTime(gain * 0.16, t); g2.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
-        o2.connect(g2); g2.connect(g); o2.start(t); o2.stop(t + 0.15);
+      const o = ctx.createOscillator(); o.type = type; o.frequency.value = f; o.connect(g); o.start(t); o.stop(t + dec + 0.05);
+      for (const [ratio, amp, d2] of parts) {
+        if (f * ratio > 12000) continue;
+        const o2 = ctx.createOscillator(), g2 = ctx.createGain(); o2.frequency.value = f * ratio;
+        g2.gain.setValueAtTime(gain * amp, t); g2.gain.exponentialRampToValueAtTime(0.0001, t + d2);
+        o2.connect(g2); g2.connect(g); o2.start(t); o2.stop(t + d2 + 0.05);
       }
       let out = g;
-      if (ctx.createStereoPanner) { const p = ctx.createStereoPanner(); p.pan.value = pan; g.connect(p); out = p; }
+      if (ctx.createStereoPanner) { const p = ctx.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, pan)); g.connect(p); out = p; }
       out.connect(dry); if (kind !== "bass") out.connect(send);
     }
-    function schedule(midi, gain, pan, kind) {
-      const slot = Math.ceil((ctx.currentTime + 0.02) / S16), key = slot * 128 + midi;
-      if (used.has(key)) return;           // una sola nota por casilla y altura
-      used.set(key, slot); voice(slot * S16, midi, gain * (slot % 4 === 0 ? 1 : 0.78), pan, kind);
-    }
+    function setPad(ch, t) { const tones = pool(ch, 50, 66); pad.forEach((o, i) => o.frequency.setTargetAtTime(hz(tones[i % tones.length]), t, 0.05)); }
+
     return {
       toggle() {
         if (!ctx && !init()) return false;
         on = !on; ctx.resume();
-        nextBar = Math.ceil(ctx.currentTime / BAR) * BAR;
         master.gain.setTargetAtTime(on ? 0.7 : 0, ctx.currentTime, 0.08);
+        if (on) { leadChord = chord(xs[0] >= 0 ? 1 : -1, visits[0][xs[0] >= 0 ? 0 : 1]); setPad(leadChord, ctx.currentTime); }
         return on;
       },
-      // Se llama una vez por fila de simulación: detecta vueltas y cambios de ala.
+      setSong(e) { song = SONGS[e] || SONGS["-6"]; if (on && leadChord) { leadChord = chord(xs[0] >= 0 ? 1 : -1, visits[0][xs[0] >= 0 ? 0 : 1]); setPad(leadChord, ctx.currentTime); } return song; },
+      song: () => song,
+      // Una vez por fila de simulación: detecta giros y cambios de ala.
       row() {
         for (let v = 0; v < V; v++) {
           const z = Z[v], x = X[v];
-          if (on && zb[v] > za[v] && zb[v] >= z && zb[v] > 24) pending.push([v, zb[v], x]);
-          if (on && v < 2 && x * xs[v] < 0) pending.push([-1, 0, x]);
+          if (x * xs[v] < 0) { visits[v][x > 0 ? 0 : 1]++; if (on && v < LEADS) pending.push([v, 2, 0, x]); }
+          if (on && zb[v] > za[v] && zb[v] >= z && zb[v] > 24) pending.push([v, 1, zb[v], x]);
+          if (on && v < LEADS && zb[v] < za[v] && zb[v] <= z && zb[v] < 24) pending.push([v, 0, zb[v], x]);
           za[v] = zb[v]; zb[v] = z; xs[v] = x;
         }
       },
-      // Se llama una vez por fotograma: agenda lo detectado y lleva el compás.
-      frame() {
+      // Una vez por fotograma: toca lo detectado y ajusta el sonido a la cámara.
+      // panR y panL son la posición en pantalla de cada ala, de -1 a 1.
+      frame(panR, panL, dist, sep) {
         if (!on) { pending.length = 0; return; }
-        const now = ctx.currentTime, ch = chordAt(now + 0.05);
-        for (const [v, zmax, x] of pending) {
-          const pan = Math.max(-0.8, Math.min(0.8, x / 14));
-          if (v < 0) { const ps = pool(ch, 86, 98); schedule(ps[Math.floor(Math.random() * ps.length)], 0.05, pan, "spark"); continue; }
-          const low = v % 2 === 1, ps = low ? pool(ch, 50, 76) : pool(ch, 62, 88);
-          const f = Math.min(0.999, Math.max(0, (zmax - 30) / 17));
-          schedule(ps[Math.floor(f * ps.length)], low ? 0.11 : 0.10, pan, low ? "harp" : "celesta");
+        const now = ctx.currentTime + 0.012, seen = new Map();
+        for (const [v, what, zv, x] of pending) {
+          const wing = x >= 0 ? 1 : -1, ch = chord(wing, visits[v][wing > 0 ? 0 : 1]), pan = wing > 0 ? panR : panL;
+          if (what === 2) {                 // cambio de ala: destello, y si es la voz guía, acorde y bajo
+            if (v === 0) { leadChord = ch; setPad(ch, now); voice(now, ch.bass + 12, 0.17, 0, "bass"); }
+            const ps = pool(ch, 86, 98); voice(now, ps[Math.floor(Math.random() * ps.length)], 0.04, pan, "spark");
+            continue;
+          }
+          let ps, f;
+          if (what === 1) { ps = wing > 0 ? pool(ch, 69, 93) : pool(ch, 57, 81); f = (zv - 30) / 17; }
+          else { ps = wing > 0 ? pool(ch, 62, 76) : pool(ch, 50, 64); f = (zv - 4) / 16; }
+          const midi = ps[Math.floor(Math.min(0.999, Math.max(0, f)) * ps.length)], kind = wing > 0 ? song[4] : song[5], key = kind + midi;
+          const s = seen.get(key); if (s) s.n++; else seen.set(key, { midi, kind, pan, n: 1, g: what === 1 ? 0.085 : 0.06 });
         }
         pending.length = 0;
-        if (now + 0.25 > nextBar) {        // nuevo compás: bajo y colchón al acorde que toca
-          const c = chordAt(nextBar + 0.01), tones = pool(c, 50, 66);
-          voice(nextBar, c.bass + 12, 0.16, 0, "bass");
-          pad.forEach((o, i) => o.frequency.setTargetAtTime(hz(tones[i % tones.length]), nextBar, 0.06));
-          nextBar += BAR;
-          for (const [k, s] of used) if (s * S16 < now - 1) used.delete(k);
+        for (const s of seen.values()) {     // las que coinciden suenan como una sola nota más fuerte
+          if (now - lastNote < 0.03 && s.n === 1) continue;
+          lastNote = now; voice(now, s.midi, s.g * Math.min(2.2, Math.sqrt(s.n)), s.pan, s.kind);
         }
+        // Cerca: brillante y seco. Lejos: apagado y con más eco. Más separación: eco más largo.
+        const far = Math.min(1, Math.max(0, (dist - 60) / 140));
+        toneLP.frequency.setTargetAtTime(11000 * Math.pow(0.14, far), now, 0.1);
+        wetG.gain.setTargetAtTime(0.25 + 0.6 * far, now, 0.1);
+        fbG.gain.setTargetAtTime(0.2 + 0.3 * Math.min(1, Math.max(0, (Math.log10(Math.max(sep, 1e-9)) + 2) / 3.5)), now, 0.2);
       },
       burst() {
-        if (!on) return;
-        const t = ctx.currentTime + 0.02, ps = pool(chordAt(t), 50, 90);
-        ps.forEach((m, i) => { if (i % 2 === 0) voice(t + 0.014 * i, m, 0.09, -0.6 + 1.2 * i / ps.length, m < 70 ? "harp" : "celesta"); });
+        if (!on || !leadChord) return;
+        const t = ctx.currentTime + 0.02, ps = pool(leadChord, 50, 90);
+        ps.forEach((m, i) => { if (i % 2 === 0) voice(t + 0.014 * i, m, 0.085, -0.6 + 1.2 * i / ps.length, m < 70 ? song[5] : song[4]); });
         const o = ctx.createOscillator(), g = ctx.createGain();
         o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.5);
         g.gain.setValueAtTime(0.4, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
         o.connect(g); g.connect(dry); o.start(t); o.stop(t + 1);
       },
       flap() {
-        if (!on) return;
-        const t = ctx.currentTime + 0.02, ps = pool(chordAt(t), 62, 96);
-        ps.forEach((m, i) => voice(t + 0.035 * i, m, 0.05, -0.5 + i / ps.length, "celesta"));
+        if (!on || !leadChord) return;
+        const t = ctx.currentTime + 0.02, ps = pool(leadChord, 62, 96);
+        ps.forEach((m, i) => voice(t + 0.035 * i, m, 0.05, -0.5 + i / ps.length, song[4]));
       },
       suspend(hide) { if (ctx && on) (hide ? ctx.suspend() : ctx.resume()); },
     };
@@ -695,12 +814,13 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   canvas.addEventListener("pointercancel", () => { ptr = null; });
   canvas.addEventListener("wheel", (ev) => { ev.preventDefault(); cam.dist = Math.max(60, Math.min(200, cam.dist * Math.exp(ev.deltaY * 0.001))); }, { passive: false });
 
-  $("eps").addEventListener("input", (ev) => { exp10 = Number(ev.target.value); knob(); });
+  $("eps").addEventListener("input", (ev) => { exp10 = Number(ev.target.value); knob(); music.setSong(exp10); songLine(); });
   $("eps").addEventListener("change", () => launch(0));
   $("launch").addEventListener("click", () => { if (paused) togglePause(); launch(0); });
-  function togglePause() { paused = !paused; $("pause").textContent = paused ? "Reanudar" : "Pausar"; }
+  function togglePause() { paused = !paused; $("pause").textContent = paused ? t("resume") : t("pause"); }
   $("pause").addEventListener("click", togglePause);
-  $("sound").addEventListener("click", () => { const on = music.toggle(); $("sound").setAttribute("aria-pressed", String(on)); $("sound").textContent = on ? "Silenciar" : "Sonido"; });
+  $("sound").addEventListener("click", () => { const on = music.toggle(); $("sound").setAttribute("aria-pressed", String(on)); $("sound").textContent = on ? t("mute") : t("sound"); });
+  $("lang").addEventListener("click", () => { lang = lang === "es" ? "en" : "es"; try { localStorage.setItem("mariposa-idioma", lang); } catch (e) { /* sin almacenamiento */ } applyLang(); });
   document.addEventListener("visibilitychange", () => music.suspend(document.hidden));
   addEventListener("resize", () => { resize(true); drawChart(); });
 
@@ -732,11 +852,12 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       while (acc >= H && rows < 6) { stepAll(H, nMax); simT += H; acc -= H; rows++; pushRow(); }
       if (rows) { measure(); events(); }
     }
-    music.frame();
     if (shock[2] >= 0) { shock[2] += dt; if (shock[2] > 3) shock[2] = -1; }
     if (tap[2] >= 0) { tap[2] += dt; if (tap[2] > 2.5) tap[2] = -1; }
     if (cam.sway) { cam.t += dt; cam.az = -96 + 14 * Math.sin(cam.t * 0.16); cam.el = 9 + 4 * Math.sin(cam.t * 0.11); }
     updateCamera();
+    // Cada ala suena donde se ve: su posición en pantalla decide el lado estéreo.
+    music.frame((toUv(8.5, 8.5, 27)[0] - 0.5) * 2.4, (toUv(-8.5, -8.5, 27)[0] - 0.5) * 2.4, cam.dist, sep);
 
     // Tras separarse, las estelas se acortan (cada atmósfera pasa a ser un cometa corto, así
     // los colores no se funden en blanco) y la exposición baja de "todas superpuestas" a "sueltas".
@@ -807,10 +928,10 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     requestAnimationFrame(frame);
   }
 
-  knob();
   resize(true);
   updateCamera();
   launch(170);                         // la primera vista ya trae un tramo de estela dibujado
+  applyLang();
   if (reduceMotion) togglePause();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawChart);
   requestAnimationFrame((t) => { last = t; frame(t); });
