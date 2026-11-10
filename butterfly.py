@@ -34,7 +34,9 @@ DIRV = np.array([1.0, 1.0, 1.0]) / math.sqrt(3.0)
 TARGET = np.array([0.0, 0.0, 24.5])
 FOV_DEG = 38.0
 
-COLD_S = 2.4          # duracion del arranque en frio (adelanto del momento de la divergencia)
+COLD_S = 2.8          # duracion del arranque en frio (adelanto del momento de la divergencia)
+REWIND_S = 1.3        # rebobinado que lleva del adelanto al punto de partida
+PRE_S = COLD_S + REWIND_S
 COLD_AT = 1.3         # el adelanto empieza este tiempo despues de que la nube se abre
 PLUME_STEPS = 2400    # ventana de tiempo de la grafica de pronostico, en pasos
 
@@ -300,7 +302,7 @@ def presim(x0, nsteps):
 
 def build_schedule(diag, fps, tail_s):
     q = 60.0 / fps
-    FAST, SLOW, NORM = 15.0 * q, 4.0 * q, 10.0 * q
+    FAST, SLOW, NORM = 10.0 * q, 4.0 * q, 10.0 * q
     TH1, TH2 = 0.6, 20.0
     EXTRA = 700          # pasos en camara lenta despues de que la nube se abre
 
@@ -484,6 +486,7 @@ class Developer:
 
     def reset(self):
         self.prev = None
+        self.ref = None           # tras un salto, la exposicion se mide de nuevo
 
     def __call__(self, acc, persist, mask=None):
         import cv2
@@ -652,7 +655,7 @@ def main():
     ap.add_argument("--fps", type=int, default=60)
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--stills", default="", help="segundos del video separados por coma; guarda PNG en vez de video")
-    ap.add_argument("--lang", default="es", choices=list(TEXT))
+    ap.add_argument("--lang", default="es", help="es, en o es,en: un video por idioma en una sola pasada")
     ap.add_argument("--tail", type=float, default=10.0, help="segundos del acto final")
     ap.add_argument("--crf", type=int, default=16)
     ap.add_argument("--trail", type=int, default=100, help="longitud de estela (pasos) en el acto final")
@@ -666,7 +669,7 @@ def main():
     scale = args.scale
     W = Hh = int(round(1080 * scale / 2) * 2)
     fps = args.fps
-    T = TEXT[args.lang]
+    langs = [l.strip() for l in args.lang.split(",") if l.strip() in TEXT] or ["es"]
 
     t0 = time.time()
     x0 = find_start()
@@ -675,9 +678,10 @@ def main():
     NF = len(nsub)
     tg, ts, tf, te, tb = (ev[k] / fps for k in ("go", "slow", "fast", "end", "burst"))
     N0 = int(round(COLD_S * fps))
+    NR = int(round(REWIND_S * fps))
     fc0 = int(round((tb + COLD_AT) * fps))
     print(f"inicio {x0.round(3)}  presim {time.time() - t0:.1f}s")
-    print(f"total {COLD_S + te:.1f}s = adelanto {COLD_S}s + {NF} fotogramas  "
+    print(f"total {PRE_S + te:.1f}s = adelanto {COLD_S}s + rebobinado {REWIND_S}s + {NF} fotogramas  "
           f"go {tg:.2f}  slow {ts:.2f}  burst {tb:.2f}  fast {tf:.2f}  pasos {ci[-1]}")
     if args.info:
         for sec in range(0, int(te) + 1):
@@ -726,129 +730,159 @@ def main():
     ink = (246, 244, 238)
     cool, warm, dim = (132, 196, 255), (255, 206, 112), (150, 166, 198)
 
+    # Los tres primeros textos se reparten el primer acto; cada uno dura mas de tres segundos.
     cap_y = 0.098 * Hh
-    third = (ts - 0.1 - (tg + 1.2)) / 3.0
     a1 = tg + 0.9
-    caps = [
-        (make_layer(T["c2"], f_cap, ink), W / 2, cap_y, a1, a1 + third - 0.1),
-        (make_layer(T["c2b"], f_cap, ink), W / 2, cap_y, a1 + third, a1 + 2 * third - 0.1),
-        (make_layer(T["c2c"], f_cap, ink), W / 2, cap_y, a1 + 2 * third, ts - 0.1),
-        (make_layer(T["c3"], f_cap, ink), W / 2, cap_y, ts + 0.1, tb - 0.2),
-        # Las ecuaciones entran aqui, cuando el texto habla de ellas, y no al principio.
-        (make_layer([EQUATIONS], f_eq, (190, 215, 255)), W / 2, 0.168 * Hh, ts + 0.5, tb - 0.2),
-        (make_layer([T["credit"]], f_lab, dim, tracking=trk(2.0), shadow=0.6), W / 2, 0.203 * Hh, ts + 0.7, tb - 0.2),
-        (make_layer(T["c4"], f_cap, ink), W / 2, cap_y, tb + 0.3, tf + 2.3),
-        (make_layer(T["c5"], f_cap, ink), W / 2, cap_y, tf + 2.9, te - 3.7),
-        (make_layer([T["title"]], f_title, ink, tracking=trk(8)), W / 2, 0.088 * Hh, te - 3.3, te + 1.0),
-        (make_layer([T["sub"]], f_lab, dim, tracking=trk(1.6)), W / 2, 0.142 * Hh, te - 2.9, te + 1.0),
-    ]
-    hook = make_layer(T["hook"], f_hook, ink, shadow=0.9)
-    hud_lab = make_layer([T["hud"]], f_lab, dim, tracking=trk(2.0), shadow=0.6)
-    tag = make_layer([T["tag"]], f_lab, dim, tracking=trk(2.0), shadow=0.6)
-    plume_lab = make_layer([T["plume"]], f_lab, dim, tracking=trk(2.0), shadow=0.6)
-    rain_lab = make_layer([T["rain"]], f_lab, cool, tracking=trk(2.4), shadow=0.6)
-    sun_lab = make_layer([T["sun"]], f_lab, warm, tracking=trk(2.4), shadow=0.6)
+    third = (ts - 1.3 - a1) / 3.0
+    t_lab = a1 + 2 * third          # el marcador lluvia/sol aparece con su subtitulo
+
+    def make_texts(T):
+        caps = [
+            (make_layer(T["c2"], f_cap, ink), W / 2, cap_y, a1, a1 + third - 0.1),
+            (make_layer(T["c2b"], f_cap, ink), W / 2, cap_y, a1 + third, a1 + 2 * third - 0.1),
+            (make_layer(T["c2c"], f_cap, ink), W / 2, cap_y, a1 + 2 * third, ts - 1.3),
+            (make_layer(T["c3"], f_cap, ink), W / 2, cap_y, ts - 1.2, tb - 0.2),
+            # Las ecuaciones entran aqui, cuando el texto habla de ellas, y no al principio.
+            (make_layer([EQUATIONS], f_eq, (190, 215, 255)), W / 2, 0.168 * Hh, ts - 0.8, tb - 0.2),
+            (make_layer([T["credit"]], f_lab, dim, tracking=trk(2.0), shadow=0.6), W / 2, 0.203 * Hh, ts - 0.6, tb - 0.2),
+            (make_layer(T["c4"], f_cap, ink), W / 2, cap_y, tb + 0.3, tf + 2.3),
+            (make_layer(T["c5"], f_cap, ink), W / 2, cap_y, tf + 2.9, te - 3.7),
+            (make_layer([T["title"]], f_title, ink, tracking=trk(8)), W / 2, 0.088 * Hh, te - 3.3, te + 1.0),
+            (make_layer([T["sub"]], f_lab, dim, tracking=trk(1.6)), W / 2, 0.142 * Hh, te - 2.9, te + 1.0),
+        ]
+        return {
+            "dec": T["dec"], "caps": caps,
+            "hook": make_layer(T["hook"], f_hook, ink, shadow=0.9),
+            "hud": make_layer([T["hud"]], f_lab, dim, tracking=trk(2.0), shadow=0.6),
+            "tag": make_layer([T["tag"]], f_lab, dim, tracking=trk(2.0), shadow=0.6),
+            "plume": make_layer([T["plume"]], f_lab, dim, tracking=trk(2.0), shadow=0.6),
+            "rain": make_layer([T["rain"]], f_lab, cool, tracking=trk(2.4), shadow=0.6),
+            "sun": make_layer([T["sun"]], f_lab, warm, tracking=trk(2.4), shadow=0.6),
+        }
+
+    texts = [make_texts(TEXT[l]) for l in langs]
 
     mx = 0.055 * W
     prect = (int(mx), int(0.738 * Hh), int(0.775 * W), int(0.874 * Hh))
     plume = Plume(sub, prect, scale)
     yy = np.arange(Hh, dtype=np.float32)
     att_mask = (1.0 - 0.90 * np.clip((yy - 0.66 * Hh) / (0.07 * Hh), 0, 1) ** 2)[:, None, None]
-    t_lab = a1 + 2 * third          # el marcador lluvia/sol aparece con su subtitulo
     foot_y = 0.940 * Hh
 
-    def compose_main(f, col, dev):
+    def base_main(f, col):
+        """Lo que no depende del idioma: la grafica de pronostico y sus guias."""
         t = f / fps
-        s_now = int(ci[f])
         ap_ = smooth((t - tg - 0.2) / 0.8)
         if ap_ > 0:
             x0p, y0p, x1p, y1p = prect
             ym = (y0p + y1p) // 2
             col[ym:ym + 1, x0p:x1p] += 0.07 * ap_
             col[y0p:y1p, x1p:x1p + 1] += 0.10 * ap_
-            pim = plume.render(s_now)
+            pim = plume.render(int(ci[f]))
             if pim is not None:
                 reg = col[y0p:y1p, x0p:x1p]
                 reg[:] = 1.0 - (1.0 - np.clip(reg, 0, 1)) * (1.0 - pim * ap_)
-            comp(col, plume_lab, mx, 0.716 * Hh, ap_ * 0.9, anchor="l")
+        return ap_
+
+    def compose_main(f, col, dev, X, ap_):
+        t = f / fps
+        s_now = int(ci[f])
+        if ap_ > 0:
+            comp(col, X["plume"], mx, 0.716 * Hh, ap_ * 0.9, anchor="l")
             al = smooth((t - t_lab) / 0.6)
             if al > 0:
                 pr = int(round(100.0 * frac[s_now]))
                 lx = 0.803 * W
-                comp(col, rain_lab, lx, 0.752 * Hh, al, anchor="l")
+                comp(col, X["rain"], lx, 0.752 * Hh, al, anchor="l")
                 comp(col, make_layer([f"{pr} %"], f_pct, cool, shadow=0.6), lx, 0.787 * Hh, al, anchor="l")
-                comp(col, sun_lab, lx, 0.828 * Hh, al, anchor="l")
+                comp(col, X["sun"], lx, 0.828 * Hh, al, anchor="l")
                 comp(col, make_layer([f"{100 - pr} %"], f_pct, warm, shadow=0.6), lx, 0.863 * Hh, al, anchor="l")
             # pie: separacion real medida en la simulacion
             sp = sub[s_now]
             dd = sp[:, None, :] - sp[None, :, :]
             sep = float(np.sqrt((dd * dd).sum(axis=2).max()))
-            comp(col, hud_lab, mx, foot_y, ap_ * 0.9, anchor="l")
-            num = make_layer([fmt_sep(sep, T["dec"])], f_num, ink, shadow=0.6)
-            comp(col, num, mx + hud_lab[1].shape[1] - 2 * hud_lab[2] + px(16), foot_y, ap_, anchor="l")
-            comp(col, tag, W - mx, foot_y, ap_ * 0.9, anchor="r")
-        for layer, cx, cyy, b0, b1 in caps:
+            comp(col, X["hud"], mx, foot_y, ap_ * 0.9, anchor="l")
+            num = make_layer([fmt_sep(sep, X["dec"])], f_num, ink, shadow=0.6)
+            comp(col, num, mx + X["hud"][1].shape[1] - 2 * X["hud"][2] + px(16), foot_y, ap_, anchor="l")
+            comp(col, X["tag"], W - mx, foot_y, ap_ * 0.9, anchor="r")
+        for layer, cx, cyy, b0, b1 in X["caps"]:
             comp(col, layer, cx, cyy, smooth((t - b0) / 0.5) * smooth((b1 - t) / 0.5))
-        fade = smooth(t / 0.35) * smooth((te - t) / 0.45 + 0.02)
-        return dev.finish(col, fade)
+        # Sin fundido de entrada: el rebobinado termina justo en este punto de luz.
+        return dev.finish(col, smooth((te - t) / 0.45 + 0.02))
 
-    def compose_cold(j, col, dev):
-        t = j / fps
-        # Sin fundido de entrada: el primer fotograma es la miniatura del video.
-        comp(col, hook, W / 2, 0.80 * Hh, smooth((COLD_S - 0.25 - t) / 0.35))
-        fade = smooth((COLD_S - t) / 0.28)
-        return dev.finish(col, fade)
+    def compose_pre(k, col, dev, X):
+        """Adelanto y rebobinado: solo la pregunta, que se va al empezar a rebobinar."""
+        t = k / fps
+        comp(col, X["hook"], W / 2, 0.80 * Hh, smooth((COLD_S + 0.3 - t) / 0.35))
+        return dev.finish(col, 1.0)
 
-    # --- que fotogramas hacen falta ---
+    # --- salidas: un video por idioma ---
     out = args.out
     outdir = os.path.dirname(os.path.abspath(out)) or "."
     os.makedirs(outdir, exist_ok=True)
+    stem, ext = os.path.splitext(out)
+    outs = [out if i == 0 else f"{stem}_{l}{ext}" for i, l in enumerate(langs)]
     stills = [float(v) for v in args.stills.split(",") if v.strip()]
-    cold_j, main_f = None, None           # None = todos
-    if stills:
-        cold_j = sorted({int(round(v * fps)) for v in stills if v < COLD_S})
-        main_f = sorted({min(NF - 1, int(round((v - COLD_S) * fps))) for v in stills if v >= COLD_S})
 
-    def save_png(name, img):
-        p = os.path.join(outdir, name)
+    # Rebobinado: fotogramas de la propia pelicula, del final del adelanto hacia atras hasta
+    # el punto de partida. Arranca despacio, corre y frena al llegar.
+    f_last = fc0 + N0 - 1
+    rew = [int(round(f_last * (1.0 - smooth((j + 1) / NR)))) for j in range(NR)]
+    pre_k, main_f = None, None            # None = todos
+    if stills:
+        pre_k = sorted({int(round(v * fps)) for v in stills if v < PRE_S})
+        main_f = sorted({min(NF - 1, int(round((v - PRE_S) * fps))) for v in stills if v >= PRE_S})
+
+    def save_png(name, img, i):
+        p = os.path.join(outdir, name if i == 0 else name.replace(".png", f"_{langs[i]}.png"))
         cv2.imwrite(p, cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
         print("guardado", p)
 
-    # --- pasada 1: el adelanto (los mismos fotogramas que se veran mas tarde) ---
-    cold = {}
-    need = range(N0) if cold_j is None else cold_j
-    if len(need):
-        wanted = set()
-        for j in need:
-            wanted.update(range(fc0 + j - 5, fc0 + j + 1))
-        keep = {fc0 + j for j in need}
-
-        def sink_cold(f, col, dev):
-            if f in keep:
-                cold[f - fc0] = (np.clip(col, 0, 1) * 255.0 + 0.5).astype(np.uint8)
-
-        run_pass(P, wanted, sink_cold, "adelanto")
-
-    ff = None
+    ffs = []
     if not stills:
         import imageio_ffmpeg
-        log = open(os.path.splitext(out)[0] + ".ffmpeg.log", "wb")
-        ff = subprocess.Popen([
-            imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-f", "rawvideo", "-pix_fmt", "rgb24",
-            "-s", f"{W}x{Hh}", "-r", str(fps), "-i", "-", "-an",
-            "-vf", "scale=out_color_matrix=bt709:out_range=tv",
-            "-c:v", "libx264", "-preset", "slow", "-crf", str(args.crf), "-pix_fmt", "yuv420p",
-            "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709",
-            "-movflags", "+faststart", out], stdin=subprocess.PIPE, stdout=log, stderr=log)
+        for o in outs:
+            log = open(os.path.splitext(o)[0] + ".ffmpeg.log", "wb")
+            ffs.append(subprocess.Popen([
+                imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-f", "rawvideo", "-pix_fmt", "rgb24",
+                "-s", f"{W}x{Hh}", "-r", str(fps), "-i", "-", "-an",
+                "-vf", "scale=out_color_matrix=bt709:out_range=tv",
+                "-c:v", "libx264", "-preset", "slow", "-crf", str(args.crf), "-pix_fmt", "yuv420p",
+                "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709",
+                "-movflags", "+faststart", o], stdin=subprocess.PIPE, stdout=log, stderr=log))
 
-    dev0 = Developer(W, Hh, scale, cy_att)
-    for j in sorted(cold):
-        img = compose_cold(j, cold[j].astype(np.float32) / 255.0, dev0)
-        if stills:
-            save_png(f"still_{j / fps:05.2f}s.png", img)
-        else:
-            ff.stdin.write(img.tobytes())
-    cold.clear()
+    def emit(name, make):
+        """make(i) devuelve el fotograma del idioma i; va a su video o a un PNG."""
+        for i in range(len(langs)):
+            img = make(i)
+            if stills:
+                save_png(name, img, i)
+            else:
+                ffs[i].stdin.write(img.tobytes())
+
+    # --- pasada 1: adelanto y rebobinado (fotogramas que la pelicula mostrara despues) ---
+    need_k = range(N0 + NR) if pre_k is None else pre_k
+    src = {k: (fc0 + k if k < N0 else rew[k - N0]) for k in need_k}      # fotograma de pelicula de cada uno
+    if src:
+        wanted, keep = set(), set(src.values())
+        for k, f in src.items():
+            wanted.update(range(max(0, f - 5), f + 1) if k < N0 else [f])
+        store = {}
+
+        def sink_pre(f, col, dev):
+            if f in keep:
+                store[f] = (np.clip(col, 0, 1) * 255.0 + 0.5).astype(np.uint8)
+
+        run_pass(P, wanted, sink_pre, "adelanto")
+        dev0 = Developer(W, Hh, scale, cy_att)
+        prev = None
+        for k in sorted(src):
+            col = store[src[k]].astype(np.float32) / 255.0
+            if k >= N0 and prev is not None:
+                col = 0.6 * col + 0.4 * prev          # estela de movimiento al rebobinar
+            prev = col
+            emit(f"still_{k / fps:05.2f}s.png", lambda i, c=col, k=k: compose_pre(k, c.copy(), dev0, texts[i]))
+        store.clear()
 
     # --- pasada 2: la pelicula ---
     if main_f is None or len(main_f):
@@ -861,21 +895,18 @@ def main():
         def sink_main(f, col, dev):
             if main_f is not None and f not in main_f:
                 return
-            img = compose_main(f, col, dev)
-            if stills:
-                save_png(f"still_{COLD_S + f / fps:05.2f}s.png", img)
-            else:
-                ff.stdin.write(img.tobytes())
+            ap_ = base_main(f, col)
+            emit(f"still_{PRE_S + f / fps:05.2f}s.png", lambda i: compose_main(f, col.copy(), dev, texts[i], ap_))
 
         run_pass(P, wanted, sink_main, "pelicula", mask=att_mask)
 
-    if ff is not None:
+    for i, ff in enumerate(ffs):
         ff.stdin.close()
         ff.wait()
-        print("video:", out, f"{os.path.getsize(out) / 1e6:.1f} MB")
+        print("video:", outs[i], f"{os.path.getsize(outs[i]) / 1e6:.1f} MB")
         if not args.no_audio:
             import sound
-            sound.add_to_video(out, sub, ci, ev, fps)
+            sound.add_to_video(outs[i], sub, ci, ev, fps)
     print(f"total {time.time() - t0:.1f}s")
 
 

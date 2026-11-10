@@ -38,7 +38,7 @@ Cada lanzamiento anota cuánto tiempo siguieron juntas las atmósferas. Al proba
 
 Tocar la mariposa da un aleteo: todas las atmósferas colapsan en una sola luz, desde donde esté una de ellas, y vuelven a separarse.
 
-El sonido es opcional y sigue la misma idea que el del video, con una diferencia: cada valor de la perilla tiene su propia canción. Son doce, de re lidio con timbre de cristal para una billonésima a do menor armónico con caja de música para una décima. Además, el zoom la hace más brillante o más lejana, la rotación mueve cada ala en el estéreo según dónde se ve y la separación entre atmósferas alarga el eco.
+El sonido es opcional y sigue la misma idea que el del video, con una diferencia: cada valor de la perilla tiene su propia canción. Son doce, con tonalidad, progresión de acordes y timbres distintos (piano eléctrico, celesta, kalimba, cristal, arpa y campanas, por síntesis FM). Además, el zoom la hace más brillante o más lejana, la rotación mueve cada ala en el estéreo según dónde se ve y la separación entre atmósferas alarga el eco.
 
 La página está en español y en inglés, con un botón para cambiar.
 
@@ -52,21 +52,19 @@ Para publicarla con GitHub Pages basta con servir la carpeta `docs/`. El fuente 
 - **Estelas sin memoria de pantalla:** cada atmósfera se representa con 400 partículas que siguen exactamente la misma trayectoria numérica, cada una con un retraso distinto. La estela existe en 3D, así que la cámara se puede mover sin que se emborrone.
 - **Render por densidad:** 1,2 millones de partículas se proyectan con cámara en perspectiva y se acumulan en un histograma de luz lineal. La profundidad de campo se obtiene desplazando cada partícula según su distancia al plano de foco.
 - **Revelado:** exposición automática, curva logarítmica, resplandor, destello anamórfico y viñeta.
-- **Arranque en frío:** una primera pasada renderiza el momento de la divergencia y lo coloca al inicio del video, antes de contar la historia en orden.
+- **Arranque en frío y rebobinado:** una primera pasada renderiza el momento de la divergencia y lo coloca al inicio del video. Después la mariposa se rebobina con fotogramas de la propia película, hasta el punto de luz del que parte la historia.
 - **Rendimiento:** las partículas se reparten entre 8 procesos y se procesan en bloques de 4.096 que caben en caché. No usa GPU y corre con prioridad baja.
 
 ## La música la toca la mariposa
 
-`sound.py` hace audibles 20 de las 3.000 atmósferas, y cada giro se oye en el momento en que ocurre:
+`sound.py` saca una melodía de la atmósfera central: una nota en lo alto de cada vuelta, en el instante en que ocurre.
 
-- **Cada vuelta:** una nota aguda en lo alto del giro y una grave en lo bajo. El ritmo de la melodía es la velocidad a la que gira la atmósfera.
-- **Cada ala tiene su voz:** la derecha es celesta, aguda y a la derecha; la izquierda es arpa, más grave y a la izquierda.
-- **Cada cambio de ala** cambia el acorde y trae una nota de bajo.
-- **El tamaño de la vuelta** decide la altura: cuanto más alto llega, más aguda la nota.
+- **Melodía por pasos:** la escala es pentatónica, así que ninguna nota choca, y la melodía se mueve a lo sumo dos grados por nota. Sube si la vuelta fue más grande y baja si fue más pequeña.
+- **Un acorde cada cuatro vueltas:** re, si menor, sol y la, con una nota de bajo en cada cambio. En el cambio la melodía cae en una nota del acorde.
+- **El ala decide el lado:** derecha o izquierda en el estéreo. En el ala izquierda la melodía se dobla una octava abajo con arpa.
+- **Acompañamiento:** mientras las atmósferas coinciden solo se oye esa melodía. Cuando divergen, otras cuatro acompañan en voz baja, cada una con sus propias vueltas.
 
-Mientras las atmósferas coinciden, las 20 tocan lo mismo al unísono. Cuando divergen, cada una sigue su propia ala y la melodía se abre en 20 voces.
-
-Qué acordes le tocan a cada ala (re y la a la derecha, si menor y sol a la izquierda), el colchón y el glissando de arpa que sube hasta el momento de la divergencia son composición, no datos.
+El colchón, el glissando de arpa que sube hasta el momento de la divergencia y el acorde abierto de ese momento son composición, no datos.
 
 ## Uso
 
@@ -78,15 +76,15 @@ pip install -r requirements.txt
 python butterfly.py --out out/efecto_mariposa.mp4
 ```
 
-Ese comando renderiza el video, sintetiza el audio y lo mezcla. Con `--lang en` sale la versión en inglés. Para probar cambios rápido, fotogramas sueltos a media resolución:
+Ese comando renderiza el video, sintetiza el audio y lo mezcla. Con `--lang es,en` salen los dos idiomas en una sola pasada (el segundo se guarda como `efecto_mariposa_en.mp4`). Para probar cambios rápido, fotogramas sueltos a media resolución:
 
 ```bash
-python butterfly.py --scale 0.5 --stills 0,6,14,25
+python butterfly.py --scale 0.5 --stills 0,3.6,9,19
 ```
 
 | Opción | Qué hace | Valor por defecto |
 | --- | --- | --- |
-| `--lang` | Idioma del texto (`es` o `en`) | `es` |
+| `--lang` | Idioma del texto: `es`, `en` o `es,en` | `es` |
 | `--scale` | Resolución relativa a 1080×1080 | `1.0` |
 | `--fps` | Fotogramas por segundo | `60` |
 | `--workers` | Procesos de simulación | `8` |
