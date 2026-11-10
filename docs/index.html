@@ -344,10 +344,14 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       o = vec4(c, 1.0);
     }`);
 
+  // Ondas: cada nota suelta una, desde la atmósfera que la tocó. Deforman un poco la imagen
+  // al pasar, igual que la onda grande del momento en que las atmósferas se separan.
+  const RN = mobile ? 6 : 8;
   const compose = program(FULL_VS, `
     uniform sampler2D uLdr, uGlow, uWide, uStreak;
-    uniform vec2 uRes, uPar; uniform float uTime, uWideAmt, uStreakAmt, uStars2;
-    uniform vec3 uShock, uTap;         // xy: centro en uv, z: segundos desde el evento (negativo si no hay)
+    uniform vec2 uRes, uPar; uniform float uTime, uWideAmt, uStreakAmt, uStars2, uFlash, uStarKick;
+    uniform vec3 uTint;
+    uniform vec4 uRingA[${RN}], uRingB[${RN}];   // A: centro en uv, edad en s (negativa si está libre), fuerza. B: color y velocidad
     in vec2 vUv; out vec4 o;
     float h1(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
     vec2 h2(vec2 p){ return fract(sin(vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)))) * 43758.5453); }
@@ -357,27 +361,28 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       float tw = 0.55 + 0.45 * sin(uTime * (0.8 + 2.6 * h1(c + 7.0)) + 40.0 * h1(c + 3.0));
       return step(0.92, h1(c)) * tw * smoothstep(0.085, 0.0, d);
     }
-    float ring(vec3 ev, float speed, float width, out vec2 dir){
-      vec2 d = (vUv - ev.xy) * vec2(uRes.x / uRes.y, 1.0);
-      float r = length(d);
-      dir = d / max(r, 1e-4);
-      if (ev.z < 0.0) return 0.0;
-      float k = (r - ev.z * speed) / width;
-      return exp(-k * k) * exp(-ev.z * 1.7);
-    }
     void main(){
-      vec2 ds, dt;
-      float rs = ring(uShock, 0.85, 0.055, ds), rt = ring(uTap, 0.55, 0.03, dt);
-      vec2 uv = vUv + ds * rs * 0.014 + dt * rt * 0.008;
+      vec2 asp = vec2(uRes.x / uRes.y, 1.0), off = vec2(0.0);
+      vec3 add = vec3(0.0);
+      for (int i = 0; i < ${RN}; i++) {
+        vec4 a = uRingA[i];
+        if (a.z < 0.0) continue;
+        vec4 b = uRingB[i];
+        vec2 d = (vUv - a.xy) * asp;
+        float r = length(d), k = (r - a.z * b.w) / (0.010 + 0.035 * a.w);
+        float e = exp(-k * k) * exp(-a.z * (3.4 - 1.6 * a.w)) * a.w;   // las ondas pequeñas se apagan antes
+        off += d / max(r, 1e-4) * e;
+        add += b.rgb * e;
+      }
+      vec2 uv = vUv + off * 0.014 / asp;
       vec3 c = texture(uLdr, uv).rgb + texture(uGlow, uv).rgb * 0.85;
       c += texture(uWide, uv).rgb * uWideAmt + texture(uStreak, uv).rgb * vec3(0.55, 0.80, 1.0) * uStreakAmt;
-      c += rs * vec3(0.45, 0.60, 1.0) * 0.55 + rt * vec3(0.75, 0.80, 1.0) * 0.45;
-      if (uShock.z >= 0.0) c += exp(-uShock.z / 0.16) * 0.20;
+      c += add * 0.55 + uFlash * 0.20;
       vec2 q = vUv - vec2(0.5, 0.56);
       float r = length(q) * 1.7;
-      vec3 bg = vec3(0.020, 0.024, 0.051) + exp(-r * r * 1.3) * vec3(0.022, 0.028, 0.060);
-      vec2 su = vUv * vec2(uRes.x / uRes.y, 1.0) + uPar;
-      bg += (stars(su, 30.0) * 0.50 + stars(su * 1.9 + 3.1, 30.0) * 0.28 * uStars2) * vec3(0.80, 0.88, 1.0);
+      vec3 bg = vec3(0.020, 0.024, 0.051) + exp(-r * r * 1.3) * uTint;
+      vec2 su = vUv * asp + uPar;
+      bg += (stars(su, 30.0) * 0.50 + stars(su * 1.9 + 3.1, 30.0) * 0.28 * uStars2) * vec3(0.80, 0.88, 1.0) * (1.0 + 1.6 * uStarKick);
       c = 1.0 - (1.0 - clamp(c, 0.0, 1.0)) * (1.0 - bg);
       c *= 1.0 - 0.22 * pow(r, 2.4);
       c += (h1(gl_FragCoord.xy) - 0.5) / 255.0;
@@ -441,7 +446,8 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   const M = new Float32Array(16);
   function updateCamera() {
     const a = cam.az * Math.PI / 180, e = cam.el * Math.PI / 180, cz = 24.5;
-    const ex = cam.dist * Math.cos(e) * Math.cos(a), ey = cam.dist * Math.cos(e) * Math.sin(a), ez = cz + cam.dist * Math.sin(e);
+    const dd = cam.dist * (1 - 0.012 * kick);
+    const ex = dd * Math.cos(e) * Math.cos(a), ey = dd * Math.cos(e) * Math.sin(a), ez = cz + dd * Math.sin(e);
     let fx = -ex, fy = -ey, fz = cz - ez; const fl = Math.hypot(fx, fy, fz); fx /= fl; fy /= fl; fz /= fl;
     let rx = fy, ry = -fx; const rl = Math.hypot(rx, ry); rx /= rl; ry /= rl;      // f × (0,0,1); rz = 0
     const ux = ry * fz, uy = -rx * fz, uz = rx * fy - ry * fx;                      // r × f
@@ -462,7 +468,29 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   let abs = 4096, born = abs, cohRow = abs - T;
   let simT = 0, acc = 0, sep = 0, rain = 1, cen = [0, 0, 20];
   let horizon = null, tSlow = null, tBurst = null, open = 0, speed = 0, exp10 = -6, paused = false, ref = 0.02 * NREF, flap = false;
-  let shock = [0.5, 0.5, -1], tap = [0.5, 0.5, -1], time = 0;
+  let time = 0;
+  // Pulsos: cada nota se ve. ringA y ringB guardan las ondas vivas; kick es el pulso de
+  // brillo que deja cada nota; tint es el color del resplandor de fondo, que sigue al acorde.
+  const ringA = new Float32Array(RN * 4), ringB = new Float32Array(RN * 4);
+  for (let i = 0; i < RN; i++) ringA[i * 4 + 2] = -1;
+  let ringI = 0, kick = 0, flash = 0, starKick = 0;
+  const CH_COL = [[1.0, 0.82, 0.45], [0.72, 0.55, 1.0], [0.45, 0.85, 1.0], [1.0, 0.5, 0.75]];
+  const tint = [0.022, 0.028, 0.060], tintGoal = [0.022, 0.028, 0.060];
+  function ring(u, v, strength, speed, r, g, b) {
+    const i = (ringI++ % RN) * 4;
+    ringA[i] = u; ringA[i + 1] = v; ringA[i + 2] = 0; ringA[i + 3] = strength;
+    ringB[i] = r; ringB[i + 1] = g; ringB[i + 2] = b; ringB[i + 3] = speed;
+  }
+  // tipo 0: nota de la melodía (fuerte si cambia el acorde); 1: nota de una acompañante; 2: cambio de ala
+  function onBeat(kind, v, strong, chord) {
+    if (kind === 2) { starKick = 1; return; }
+    const uv = toUv(X[v], Y[v], Z[v]);
+    if (kind === 1) { ring(uv[0], uv[1], 0.2, 0.34, colData[v * 4], colData[v * 4 + 1], colData[v * 4 + 2]); return; }
+    const c = CH_COL[chord % 4];
+    kick = Math.max(kick, strong ? 1 : 0.45);
+    ring(uv[0], uv[1], strong ? 0.62 : 0.3, strong ? 0.7 : 0.42, 0.5 + 0.5 * c[0], 0.5 + 0.5 * c[1], 0.5 + 0.5 * c[2]);
+    if (strong) for (let j = 0; j < 3; j++) tintGoal[j] = 0.014 + 0.05 * c[j];
+  }
   const runs = [];
 
   function pushRow() {
@@ -485,7 +513,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   function seed(bx, by, bz) {
     const k = Math.pow(10, exp10) * 0.5 / Math.sqrt(3);
     for (let i = 0; i < NCAP; i++) { X[i] = bx + k * OFF[i]; Y[i] = by + k * OFF[i]; Z[i] = bz + k * OFF[i]; }
-    simT = 0; acc = 0; horizon = null; tSlow = null; tBurst = null; open = 0; speed = 0; shock[2] = -1;
+    simT = 0; acc = 0; horizon = null; tSlow = null; tBurst = null; open = 0; speed = 0;
   }
   // Lanzamiento desde el punto de siempre: comparable entre una prueba y otra.
   function launch(preroll) {
@@ -502,7 +530,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   // Aleteo: todas las atmósferas vuelven a juntarse donde está una de ellas y salen de nuevo.
   function aleteo(u, v) {
     seed(X[leader], Y[leader], Z[leader]);
-    cohRow = abs; flap = true; tap = [u, v, 0];
+    cohRow = abs; flap = true; ring(u, v, 0.7, 0.55, 0.75, 0.8, 1.0);
     measure(); readouts();
     say(t("sayFlap")(t("names")[exp10]));
     music.flap();
@@ -516,7 +544,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     if (tSlow === null && sep > 0.5) { tSlow = simT; say(t("saySlow")); }
     if (tBurst === null && sep > 15) {
       tBurst = simT;
-      const uv = toUv(cen[0], cen[1], cen[2]); shock = [uv[0], uv[1], 0];
+      const uv = toUv(cen[0], cen[1], cen[2]); ring(uv[0], uv[1], 1.0, 0.85, 0.45, 0.6, 1.0); flash = 1; kick = 1;
       say(t("sayBurst"));
       music.burst();
       buzz(28);
@@ -759,39 +787,44 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       setSong(e) { song = SONGS[e] || SONGS["-6"]; build(); chordK = 0; loops.fill(0); if (on) setPad(ctx.currentTime); },
       song: () => song,
       // Una vez por fila de simulación: detecta lo alto de cada vuelta y los cambios de ala.
+      // Corre siempre, con sonido o sin él, porque cada nota también se ve.
       row() {
         for (let v = 0; v < NV; v++) {
           const z = Z[v], x = X[v];
-          if (on && v === 0 && x * xs[v] < 0) pending.push([0, 2, 0, x]);
-          if (on && zb[v] > za[v] && zb[v] >= z && zb[v] > 24) pending.push([v, 1, zb[v], x]);
+          if (v === 0 && x * xs[v] < 0) pending.push([0, 2, 0, x]);
+          if (zb[v] > za[v] && zb[v] >= z && zb[v] > 24) pending.push([v, 1, zb[v], x]);
           za[v] = zb[v]; zb[v] = z; xs[v] = x;
         }
       },
-      // Una vez por fotograma: toca lo detectado y ajusta el sonido a la cámara.
-      // panR y panL son la posición en pantalla de cada ala, de -1 a 1.
-      frame(panR, panL, dist, sep) {
-        if (!on) { pending.length = 0; return; }
-        const now = ctx.currentTime + 0.012;
+      // Una vez por fotograma: decide las notas, las toca si hay sonido y avisa de cada una
+      // con beat(tipo, atmósfera, fuerte, acorde). panR y panL son la posición en pantalla
+      // de cada ala, de -1 a 1.
+      frame(panR, panL, dist, sep, beat) {
+        const now = on ? ctx.currentTime + 0.012 : 0;
         for (const [v, what, zv, x] of pending) {
           const right = x >= 0, pan = (right ? panR : panL) * 0.7;
-          if (what === 2) {                 // destello al cambiar de ala, sin amontonarse
-            if (now - lastSpark > 1.2) { lastSpark = now; note(now, ladder[ladder.length - 1 - Math.floor(Math.random() * 3)] + 24, 0.02, pan, "glass"); }
+          if (what === 2) {                 // cambio de ala: destello, sin amontonarse
+            beat(2, 0, false, chordK);
+            if (on && now - lastSpark > 1.2) { lastSpark = now; note(now, ladder[ladder.length - 1 - Math.floor(Math.random() * 3)] + 24, 0.02, pan, "glass"); }
             continue;
           }
           if (v === 0) {
             const strong = loops[0] % 4 === 0;
-            if (strong) { if (loops[0] > 0) chordK++; setPad(now); bass(now, chordPcs(chordK)[0]); }
+            if (strong) { if (loops[0] > 0) chordK++; if (on) { setPad(now); bass(now, chordPcs(chordK)[0]); } }
             loops[0]++;
             // La melodía no salta de octava al cambiar de ala: el ala decide el lado, y en la
             // izquierda se dobla una octava abajo con el segundo timbre, que la oscurece.
             const m = pick(0, zv, strong);
-            note(now, m + 12, strong ? 0.13 : 0.1, pan, song[3]);
-            if (!right) note(now, m, 0.045, pan, song[4]);
-          } else if (sep > 0.5) {            // acompañantes: solo ya separadas, bajito, por debajo y una vuelta sí y otra no
-            if (loops[v]++ % 2 === 0) note(now, pick(v, zv, false), 0.028, (right ? panR : panL) * 0.95, song[4]);
+            if (on) { note(now, m + 12, strong ? 0.13 : 0.1, pan, song[3]); if (!right) note(now, m, 0.045, pan, song[4]); }
+            beat(0, 0, strong, chordK);
+          } else if (sep > 0.5 && loops[v]++ % 2 === 0) {   // acompañantes: ya separadas, bajito, por debajo y una vuelta sí y otra no
+            const m = pick(v, zv, false);
+            if (on) note(now, m, 0.028, (right ? panR : panL) * 0.95, song[4]);
+            beat(1, v, false, chordK);
           }
         }
         pending.length = 0;
+        if (!on) return;
         // Cerca: brillante y seco. Lejos: apagado y con más eco. Más separación: eco más largo.
         const far = Math.min(1, Math.max(0, (dist - 60) / 140));
         toneLP.frequency.setTargetAtTime(9000 * Math.pow(0.16, far), now, 0.1);
@@ -873,12 +906,13 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       while (acc >= H && rows < 6) { stepAll(H, nMax); simT += H; acc -= H; rows++; pushRow(); }
       if (rows) { measure(); events(); }
     }
-    if (shock[2] >= 0) { shock[2] += dt; if (shock[2] > 3) shock[2] = -1; }
-    if (tap[2] >= 0) { tap[2] += dt; if (tap[2] > 2.5) tap[2] = -1; }
+    for (let i = 2; i < RN * 4; i += 4) if (ringA[i] >= 0) ringA[i] = ringA[i] > 3 ? -1 : ringA[i] + dt;
+    kick *= Math.exp(-dt / 0.18); flash *= Math.exp(-dt / 0.16); starKick *= Math.exp(-dt / 0.4);
+    for (let j = 0; j < 3; j++) tint[j] += (tintGoal[j] - tint[j]) * Math.min(1, dt * 2.5);
     if (cam.sway) { cam.t += dt; cam.az = -96 + 14 * Math.sin(cam.t * 0.16); cam.el = 9 + 4 * Math.sin(cam.t * 0.11); }
     updateCamera();
     // Cada ala suena donde se ve: su posición en pantalla decide el lado estéreo.
-    music.frame((toUv(8.5, 8.5, 27)[0] - 0.5) * 2.4, (toUv(-8.5, -8.5, 27)[0] - 0.5) * 2.4, cam.dist, sep);
+    music.frame((toUv(8.5, 8.5, 27)[0] - 0.5) * 2.4, (toUv(-8.5, -8.5, 27)[0] - 0.5) * 2.4, cam.dist, sep, onBeat);
 
     // Tras separarse, las estelas se acortan (cada atmósfera pasa a ser un cometa corto, así
     // los colores no se funden en blanco) y la exposición baja de "todas superpuestas" a "sueltas".
@@ -917,7 +951,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     gl.uniform1i(motes.u.uT, T); gl.uniform1i(motes.u.uAbs, abs);
     gl.uniform2f(motes.u.uOff, 0, view.offY); gl.uniform1f(motes.u.uFloor, view.floor); gl.uniform1f(motes.u.uTime, time);
     // Juntas forman una sola estrella grande; separadas, cada una es una luciérnaga pequeña.
-    gl.uniform1f(motes.u.uGain, weight * PASSES * (0.3 + 2.7 * mix * mix)); gl.uniform1f(motes.u.uSize, (1.5 - 0.6 * mix) * (Hh / 2) / view.ty);
+    gl.uniform1f(motes.u.uGain, weight * PASSES * (0.3 + 2.7 * mix * mix) * (1 + 0.6 * kick)); gl.uniform1f(motes.u.uSize, (1.5 - 0.6 * mix) * (1 + 0.35 * kick) * (Hh / 2) / view.ty);
     gl.drawArrays(gl.POINTS, 0, nDraw);
 
     const K = Math.min(96, nMax), pv = view.plume;
@@ -930,7 +964,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     for (let p = 0; p < 2; p++) { gl.uniform1f(plume.u.uYJ, (p ? 0.6 : -0.6) * 2 / pv[3]); gl.drawArrays(gl.LINES, 0, K * PL_SEG * 2); }
     gl.disable(gl.BLEND);
 
-    pass(tone, ldr.f, W, Hh, () => { bind(0, scene.t, tone.u.uScene); gl.uniform1f(tone.u.uRef, ref * GAIN * PASSES); });
+    pass(tone, ldr.f, W, Hh, () => { bind(0, scene.t, tone.u.uScene); gl.uniform1f(tone.u.uRef, ref * GAIN * PASSES / (1 + 0.22 * kick)); });
     pass(blur, gA.f, gA.w, gA.h, () => { bind(0, ldr.t, blur.u.uSrc); gl.uniform2f(blur.u.uDir, 1.3 / gA.w, 0); gl.uniform1f(blur.u.uCut, 0); });
     pass(blur, gB.f, gB.w, gB.h, () => { bind(0, gA.t, blur.u.uSrc); gl.uniform2f(blur.u.uDir, 0, 1.3 / gB.h); gl.uniform1f(blur.u.uCut, 0); });
     if (HQ) {
@@ -942,7 +976,8 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       bind(0, ldr.t, compose.u.uLdr); bind(1, gB.t, compose.u.uGlow); bind(2, HQ ? gD.t : gB.t, compose.u.uWide); bind(3, HQ ? gS.t : gB.t, compose.u.uStreak);
       gl.uniform2f(compose.u.uRes, W, Hh); gl.uniform2f(compose.u.uPar, cam.az * 0.004, cam.el * 0.004);
       gl.uniform1f(compose.u.uTime, time); gl.uniform1f(compose.u.uWideAmt, HQ ? 0.7 : 0); gl.uniform1f(compose.u.uStreakAmt, HQ ? 1.6 : 0); gl.uniform1f(compose.u.uStars2, HQ ? 1 : 0);
-      gl.uniform3f(compose.u.uShock, shock[0], shock[1], shock[2]); gl.uniform3f(compose.u.uTap, tap[0], tap[1], tap[2]);
+      gl.uniform4fv(compose.u["uRingA[0]"], ringA); gl.uniform4fv(compose.u["uRingB[0]"], ringB);
+      gl.uniform1f(compose.u.uFlash, flash); gl.uniform1f(compose.u.uStarKick, starKick); gl.uniform3f(compose.u.uTint, tint[0], tint[1], tint[2]);
     });
 
     if (++uiTick % 6 === 0) readouts();
