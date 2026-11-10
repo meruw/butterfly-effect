@@ -36,7 +36,6 @@ body { background: var(--bg); color: var(--ink); font: 400 14.5px/1.5 var(--body
   padding-left: max(var(--gut), env(safe-area-inset-left, 0px)); padding-right: max(var(--gut), env(safe-area-inset-right, 0px));
 }
 .head h1 { margin: 0; font: 400 clamp(28px, 4.2vw, 46px)/1 var(--display); letter-spacing: 0.005em; }
-.head p { margin: 7px 0 0; max-width: min(42ch, calc(100% - 64px)); color: var(--muted); text-wrap: pretty; }
 .say {
   position: absolute; left: 50%; bottom: calc(var(--plume-h) + 72px); transform: translateX(-50%);
   width: min(88%, 26ch); margin: 0; text-align: center; pointer-events: none;
@@ -47,7 +46,6 @@ body { background: var(--bg); color: var(--ink); font: 400 14.5px/1.5 var(--body
 .say.on { opacity: 1; }
 .label { font: 500 11px/1.3 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
 .plume-label { position: absolute; left: max(var(--gut), env(safe-area-inset-left, 0px)); bottom: calc(var(--plume-h) + 22px); pointer-events: none; }
-.hint { position: absolute; right: max(var(--gut), env(safe-area-inset-right, 0px)); bottom: calc(var(--plume-h) + 22px); pointer-events: none; transition: opacity 0.6s; }
 .plume-slot {
   position: absolute; left: max(var(--gut), env(safe-area-inset-left, 0px));
   right: calc(max(var(--gut), env(safe-area-inset-right, 0px)) + var(--odds-w)); bottom: 14px; height: var(--plume-h);
@@ -84,8 +82,8 @@ body { background: var(--bg); color: var(--ink); font: 400 14.5px/1.5 var(--body
   position: absolute; top: 58px; right: max(var(--gut), env(safe-area-inset-right, 0px)); min-height: 36px; padding: 0 11px;
   font: 500 12px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; background: var(--bg);
 }
-.head p, .plume-label, .odds, .hint { transition: opacity 0.8s; }
-.app.intro-landing .head p, .app.intro-landing .plume-label, .app.intro-landing .odds, .app.intro-landing .hint { opacity: 0; }
+.plume-label, .odds { transition: opacity 0.8s; }
+.app.intro-landing .plume-label, .app.intro-landing .odds { opacity: 0; }
 .app.intro-on .panel { opacity: 0.2; pointer-events: none; }
 .nogl { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: var(--muted); }
 
@@ -101,7 +99,6 @@ body { background: var(--bg); color: var(--ink); font: 400 14.5px/1.5 var(--body
 .knob-value output { font: 500 21px/1.1 var(--mono); font-variant-numeric: tabular-nums; }
 .knob-value span { color: var(--muted); }
 input[type="range"] { width: 100%; height: 28px; margin: 0; accent-color: var(--ink); }
-.scale { display: flex; justify-content: space-between; font: 400 11px/1 var(--mono); color: var(--muted); }
 .buttons { display: flex; gap: 8px; flex-wrap: wrap; }
 button {
   font: 500 14px/1 var(--body); color: var(--ink); background: transparent; min-height: 44px;
@@ -121,20 +118,21 @@ button[aria-pressed="true"] { border-color: var(--ink); }
 #chart { width: 100%; height: 150px; display: block; }
 .insight { margin: 0; text-wrap: pretty; }
 .note { margin: 0; color: var(--muted); font-size: 13px; text-wrap: pretty; }
+.note a { color: inherit; text-underline-offset: 3px; }
+.note a:hover { color: var(--ink); }
 
 @media (max-width: 820px) {
   :root { --gut: 16px; --plume-h: 78px; --odds-w: 92px; }
   html, body { height: auto; }
   .app { grid-template-columns: minmax(0, 1fr); height: auto; min-height: 0; }
-  .stage { height: calc(100svh - 196px); min-height: 400px; }
+  .stage { height: calc(100svh - 172px); min-height: 400px; }
   .panel { border-left: 0; border-top: 1px solid var(--line); overflow: visible; padding-block: 14px 24px; gap: 18px; }
   .panel { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-  .head p { font-size: 13.5px; }
   .odds dd { font-size: 22px; }
   .plume-label .wide { display: none; }
   .say { bottom: calc(var(--plume-h) + 60px); }
 }
-@media (prefers-reduced-motion: reduce) { .hint, .say, .intro, .panel, .head p, .plume-label, .odds { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .say, .intro, .panel, .plume-label, .odds { transition: none; } }
 </style>
 
 <div class="app intro-on intro-landing" id="app">
@@ -142,7 +140,6 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     <canvas id="gl" aria-label="Lorenz attractor with every simulated atmosphere and, below it, the position of each one over time"></canvas>
     <header class="head">
       <h1 data-t="h1">Butterfly Effect</h1>
-      <p data-t="tagline">All these atmospheres start from almost the same point. Tap the butterfly to flap its wings.</p>
     </header>
     <button class="lang" id="lang" type="button" aria-label="Cambiar a español">ES</button>
     <p class="say" id="say" aria-live="polite"></p>
@@ -154,8 +151,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       </div>
     </div>
     <button class="skip" id="skip" type="button" data-t="skip" hidden>Skip</button>
-    <div class="label plume-label"><span data-t="plume">Ensemble forecast</span><span class="wide" data-t="plumeWide"> · one line per atmosphere</span></div>
-    <div class="label hint" id="hint" data-t="hint">Drag to rotate</div>
+    <div class="label plume-label" data-t="plume">Forecast</div>
     <div class="plume-slot" id="slot"></div>
     <dl class="odds">
       <div class="rain"><dt data-t="rain">Rain</dt><dd id="rain">100 %</dd></div>
@@ -166,34 +162,32 @@ button[aria-pressed="true"] { border-color: var(--ink); }
 
   <aside class="panel" id="panel" aria-label="Controls and readouts" inert>
     <div class="group">
-      <label class="label" for="eps" data-t="epsLabel">Initial difference between atmospheres</label>
+      <label class="label" for="eps" data-t="epsLabel">Initial difference</label>
       <div class="knob-value"><output id="epsNum" for="eps">0.000001</output><span id="epsName">one millionth</span></div>
       <input type="range" id="eps" min="-12" max="-1" step="1" value="-6">
-      <div class="scale"><span data-t="scaleMin">one trillionth</span><span data-t="scaleMax">one tenth</span></div>
       <div class="buttons">
-        <button class="primary" id="launch" type="button" data-t="launch">Launch again</button>
+        <button class="primary" id="launch" type="button" data-t="launch">Launch</button>
         <button id="sound" type="button" aria-pressed="false">Sound</button>
         <button id="pause" type="button">Pause</button>
       </div>
-      <p class="note" id="song"></p>
+      <p class="note" id="song" hidden></p>
     </div>
 
     <div class="group">
       <dl class="readouts">
-        <div><dt data-t="sepNow">Separation now</dt><dd id="sep">0.000001</dd></div>
-        <div><dt data-t="together">Together for</dt><dd id="horizon">0.0</dd><small id="horizonNote">model time, counting</small></div>
+        <div><dt data-t="sepNow">Separation</dt><dd id="sep">0.000001</dd></div>
+        <div><dt data-t="together">Time together</dt><dd id="horizon">0.0</dd></div>
       </dl>
     </div>
 
     <div class="group">
       <div class="label" data-t="experiment">Your experiment</div>
-      <p class="note" data-t="chartNote">Vertical: how long they stayed together. Horizontal: the initial difference. Hollow dots are wing flaps, which start somewhere else.</p>
       <canvas id="chart" aria-label="How long the atmospheres stayed together, by initial difference"></canvas>
-      <p class="insight" id="insight" aria-live="polite">When the atmospheres split, how long they held together is logged here.</p>
+      <p class="insight" id="insight" aria-live="polite" hidden></p>
     </div>
 
     <div class="group">
-      <p class="note" data-t="about">This is the convection model Edward Lorenz published in 1963. Each color is one atmosphere; stacked together they look white. If one wing were rain and the other sun, the counter would be the forecast: how many of the simulated atmospheres end up on each.</p>
+      <p class="note"><a href="https://github.com/meruw/butterfly-effect" data-t="credit">Lorenz, 1963 · code</a></p>
     </div>
   </aside>
 </div>
@@ -252,7 +246,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   // ---------- WebGL ----------
   const canvas = $("gl");
   const gl = canvas.getContext("webgl2", { antialias: false, alpha: false, depth: false, stencil: false, powerPreference: "high-performance" });
-  if (!gl) { $("nogl").hidden = false; $("hint").hidden = true; return; }
+  if (!gl) { $("nogl").hidden = false; return; }
   const hdr = !!(gl.getExtension("EXT_color_buffer_float") || gl.getExtension("EXT_color_buffer_half_float"));
   const GAIN = hdr ? 1 : 0.008;       // without a float render target, intensity is lowered to avoid saturation
   const PASSES = mobile ? 1 : 2;      // second pass offset by a fraction of a pixel: fuller lines
@@ -614,34 +608,29 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       music.burst();
       buzz(28);
     }
-    if (horizon === null && sep > 1) { horizon = simT; runs.push({ e: exp10, t: horizon, flap }); drawChart(); insight(); }
+    if (horizon === null && sep > 1) { horizon = simT; if (!flap) { runs.push({ e: exp10, t: horizon }); drawChart(); insight(); } }
   }
 
   // ---------- copy, in Spanish and English ----------
   const L = {
     es: {
       h1: "Efecto mariposa",
-      tagline: "Todas estas atmósferas salen casi del mismo punto. Toca la mariposa para dar un aleteo.",
-      plume: "Pronóstico por conjuntos", plumeWide: " · una línea por atmósfera", hint: "Arrastra para girar",
+      plume: "Pronóstico",
       rain: "Lluvia", sun: "Sol",
       nogl: "Este navegador no tiene WebGL 2, que hace falta para dibujar la simulación.",
-      epsLabel: "Diferencia inicial entre atmósferas", scaleMin: "una billonésima", scaleMax: "una décima",
-      launch: "Lanzar de nuevo", sound: "Sonido", mute: "Silenciar", pause: "Pausar", resume: "Reanudar",
-      sepNow: "Separación ahora", together: "Juntas durante",
-      counting: "tiempo del modelo, contando", done: "tiempo del modelo hasta separarse",
+      epsLabel: "Diferencia inicial",
+      launch: "Lanzar", sound: "Sonido", mute: "Silenciar", pause: "Pausa", resume: "Seguir",
+      sepNow: "Separación", together: "Tiempo juntas",
       experiment: "Tu experimento",
-      chartNote: "Vertical: cuánto tiempo siguieron juntas. Horizontal: la diferencia inicial. Los puntos huecos son aleteos, que salen desde otro lugar.",
-      insight0: "Cuando las atmósferas se separen, aquí queda anotado cuánto aguantaron juntas.",
-      insight1: (name, time) => `Con una diferencia de ${name}, las atmósferas siguieron juntas ${time} unidades de tiempo. Prueba otra diferencia y compara.`,
-      insight2: (x) => `En tus pruebas, hacer la diferencia inicial 1.000 veces más pequeña solo dio ${x} unidades de tiempo más de pronóstico fiable.`,
-      about: "Es el modelo de convección que Edward Lorenz publicó en 1963. Cada color es una atmósfera; superpuestas se ven blancas. Si un ala fuera lluvia y la otra sol, el marcador sería el pronóstico: cuántas de las atmósferas simuladas acaban en cada una.",
+      insight2: (x) => `1.000 veces más precisión: solo +${x} de tiempo.`,
+      credit: "Lorenz, 1963 · código",
       sayLaunch: "De nuevo, una sola luz.", saySlow: "Y aun así, empiezan a alejarse.", sayBurst: "Aquí termina lo que se puede saber.",
       sayFlap: (name) => `Un aleteo de ${name}.`,
       hook: "Basta un aleteo para que el mañana sea otro.", begin: "Empezar con sonido", beginMute: "Sin sonido", skip: "Saltar",
       intro1: (n) => `${n} cielos casi idénticos. Juntos son una sola luz.`,
       intro2: "Los separa apenas una millonésima.",
       intro3: "Ahora el aleteo es tuyo: toca la mariposa.", thousands: ".",
-      song: (key, hi, lo) => `Canción de esta diferencia: ${key}, con ${hi} y ${lo}. Mientras las atmósferas van juntas, cada vuelta toca la siguiente nota del tema; al separarse, la melodía improvisa. El zoom, la rotación y la separación cambian cómo suena.`,
+      song: (key, hi, lo) => `♪ ${key} · ${hi} y ${lo}`,
       notes: ["Do", "Do♯", "Re", "Mi♭", "Mi", "Fa", "Fa♯", "Sol", "La♭", "La", "Si♭", "Si"],
       modes: { maj: "mayor", min: "menor" },
       timbres: { epiano: "piano eléctrico", celesta: "celesta", glass: "cristal", kalimba: "kalimba", harp: "arpa", bell: "campanas" },
@@ -650,27 +639,22 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     },
     en: {
       h1: "Butterfly Effect",
-      tagline: "All these atmospheres start from almost the same point. Tap the butterfly to flap its wings.",
-      plume: "Ensemble forecast", plumeWide: " · one line per atmosphere", hint: "Drag to rotate",
+      plume: "Forecast",
       rain: "Rain", sun: "Sun",
       nogl: "This browser does not have WebGL 2, which is needed to draw the simulation.",
-      epsLabel: "Initial difference between atmospheres", scaleMin: "one trillionth", scaleMax: "one tenth",
-      launch: "Launch again", sound: "Sound", mute: "Mute", pause: "Pause", resume: "Resume",
-      sepNow: "Separation now", together: "Together for",
-      counting: "model time, counting", done: "model time until they split",
+      epsLabel: "Initial difference",
+      launch: "Launch", sound: "Sound", mute: "Mute", pause: "Pause", resume: "Resume",
+      sepNow: "Separation", together: "Time together",
       experiment: "Your experiment",
-      chartNote: "Vertical: how long they stayed together. Horizontal: the initial difference. Hollow dots are wing flaps, which start somewhere else.",
-      insight0: "When the atmospheres split, how long they held together is logged here.",
-      insight1: (name, time) => `With a difference of ${name}, the atmospheres stayed together for ${time} time units. Try another difference and compare.`,
-      insight2: (x) => `In your runs, making the initial difference 1,000 times smaller only bought ${x} more time units of reliable forecast.`,
-      about: "This is the convection model Edward Lorenz published in 1963. Each color is one atmosphere; stacked together they look white. If one wing were rain and the other sun, the counter would be the forecast: how many of the simulated atmospheres end up on each.",
+      insight2: (x) => `1,000× more precision: only +${x} time.`,
+      credit: "Lorenz, 1963 · code",
       sayLaunch: "Once more, a single light.", saySlow: "And still, they begin to drift.", sayBurst: "Here ends what can be known.",
       sayFlap: (name) => `A wing flap of ${name}.`,
       hook: "One wingbeat is enough to change tomorrow.", begin: "Start with sound", beginMute: "Without sound", skip: "Skip",
       intro1: (n) => `${n} almost identical skies. Together, a single light.`,
       intro2: "Barely a millionth sets them apart.",
       intro3: "Now the wingbeat is yours: tap the butterfly.", thousands: ",",
-      song: (key, hi, lo) => `This difference's song: ${key}, on ${hi} and ${lo}. While the atmospheres stay together, each loop plays the next note of the theme; once they split, the melody improvises. Zoom, rotation and separation change how it sounds.`,
+      song: (key, hi, lo) => `♪ ${key} · ${hi} and ${lo}`,
       notes: ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"],
       modes: { maj: "major", min: "minor" },
       timbres: { epiano: "electric piano", celesta: "celesta", glass: "glass", kalimba: "kalimba", harp: "harp", bell: "bells" },
@@ -686,30 +670,32 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   let sayTimer = 0;
   function say(text, ms) { const el = $("say"); el.textContent = text; el.classList.add("on"); clearTimeout(sayTimer); sayTimer = setTimeout(() => el.classList.remove("on"), ms || 2600); }
   function knob() { $("epsNum").textContent = fix(Math.pow(10, exp10), -exp10); $("epsName").textContent = t("names")[exp10]; }
+  // The song's name shows only while sound is on.
   function songLine() {
-    const s = music.song(), tm = t("timbres");
-    $("song").textContent = t("song")(t("notes")[s[0]] + " " + t("modes")[s[1]], tm[s[3]], tm[s[4]]);
+    const sg = music.song(), tm = t("timbres"), el = $("song");
+    el.hidden = $("sound").getAttribute("aria-pressed") !== "true";
+    el.textContent = t("song")(t("notes")[sg[0]] + " " + t("modes")[sg[1]], tm[sg[3]], tm[sg[4]]);
   }
   function readouts() {
     $("sep").textContent = fix(sep, 6);
     $("horizon").textContent = fix(horizon === null ? simT : horizon, 1);
-    $("horizonNote").textContent = horizon === null ? t("counting") : t("done");
     const p = Math.round(rain * 100);
     $("rain").textContent = p + " %"; $("sun").textContent = (100 - p) + " %";
   }
   function fit() {
     const best = new Map();
-    for (const r of runs) if (!r.flap) best.set(r.e, r.t);
+    for (const r of runs) best.set(r.e, r.t);
     const pts = [...best.entries()];
     if (pts.length < 2) return null;
     const n = pts.length, mx = pts.reduce((s, p) => s + p[0], 0) / n, my = pts.reduce((s, p) => s + p[1], 0) / n;
     let a = 0, b = 0; for (const [x, y] of pts) { a += (x - mx) * (y - my); b += (x - mx) * (x - mx); }
     const m = a / b; return { m, c: my - m * mx };
   }
+  // The one result worth a sentence, and only once there are two runs to compare.
   function insight() {
-    const f = fit(), el = $("insight"), last = runs[runs.length - 1];
-    if (!last) { el.textContent = t("insight0"); return; }
-    el.textContent = f ? t("insight2")(fix(Math.abs(f.m) * 3, 1)) : t("insight1")(t("names")[last.e], fix(last.t, 1));
+    const f = fit(), el = $("insight");
+    el.hidden = !f;
+    el.textContent = f ? t("insight2")(fix(Math.abs(f.m) * 3, 1)) : "";
   }
   function applyLang() {
     document.documentElement.lang = lang; document.title = t("h1");
@@ -739,7 +725,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     const f = fit();
     if (f) { cctx.strokeStyle = muted; cctx.setLineDash([4 * dpr, 4 * dpr]); cctx.beginPath(); cctx.moveTo(px(-12), py(f.m * -12 + f.c)); cctx.lineTo(px(-1), py(f.m * -1 + f.c)); cctx.stroke(); cctx.setLineDash([]); }
     cctx.fillStyle = ink; cctx.strokeStyle = ink; cctx.lineWidth = 1.4 * dpr;
-    for (const r of runs) { cctx.beginPath(); cctx.arc(px(r.e), py(r.t), 3.4 * dpr, 0, 7); if (r.flap) cctx.stroke(); else cctx.fill(); }
+    for (const r of runs) { cctx.beginPath(); cctx.arc(px(r.e), py(r.t), 3.4 * dpr, 0, 7); cctx.fill(); }
   }
 
   // ---------- music: the butterfly plays ----------
@@ -947,7 +933,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   canvas.addEventListener("pointerdown", (ev) => { ptr = { x: ev.clientX, y: ev.clientY, x0: ev.clientX, y0: ev.clientY, t: performance.now(), moved: false }; try { canvas.setPointerCapture(ev.pointerId); } catch (e) { /* no capture */ } });
   canvas.addEventListener("pointermove", (ev) => {
     if (!ptr) return;
-    if (!ptr.moved && Math.hypot(ev.clientX - ptr.x0, ev.clientY - ptr.y0) > 7) { ptr.moved = true; cam.sway = false; $("hint").style.opacity = 0; }
+    if (!ptr.moved && Math.hypot(ev.clientX - ptr.x0, ev.clientY - ptr.y0) > 7) { ptr.moved = true; cam.sway = false; }
     if (ptr.moved) { cam.az -= (ev.clientX - ptr.x) * 0.35; cam.el = Math.max(-25, Math.min(70, cam.el + (ev.clientY - ptr.y) * 0.25)); }
     ptr.x = ev.clientX; ptr.y = ev.clientY;
   });
@@ -970,7 +956,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   $("skip").addEventListener("click", () => endIntro(true));
   function togglePause() { paused = !paused; $("pause").textContent = paused ? t("resume") : t("pause"); }
   $("pause").addEventListener("click", togglePause);
-  $("sound").addEventListener("click", () => { const on = music.toggle(); $("sound").setAttribute("aria-pressed", String(on)); $("sound").textContent = on ? t("mute") : t("sound"); });
+  $("sound").addEventListener("click", () => { const on = music.toggle(); $("sound").setAttribute("aria-pressed", String(on)); $("sound").textContent = on ? t("mute") : t("sound"); songLine(); });
   $("lang").addEventListener("click", () => { lang = lang === "es" ? "en" : "es"; try { localStorage.setItem("butterfly-lang", lang); } catch (e) { /* no storage */ } applyLang(); });
   document.addEventListener("visibilitychange", () => music.suspend(document.hidden));
   addEventListener("resize", () => { resize(true); drawChart(); });
