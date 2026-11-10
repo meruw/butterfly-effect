@@ -506,6 +506,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     const k = Math.pow(10, exp10) * 0.5 / Math.sqrt(3);
     for (let i = 0; i < NCAP; i++) { X[i] = bx + k * OFF[i]; Y[i] = by + k * OFF[i]; Z[i] = bz + k * OFF[i]; }
     simT = 0; acc = 0; horizon = null; tSlow = null; tBurst = null; open = 0; speed = 0;
+    music.reset();
   }
   // Lanzamiento desde el punto de siempre: comparable entre una prueba y otra.
   function launch(preroll) {
@@ -564,7 +565,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       about: "Es el modelo de convección que Edward Lorenz publicó en 1963. Cada color es una atmósfera; superpuestas se ven blancas. Si un ala fuera lluvia y la otra sol, el marcador sería el pronóstico: cuántas de las atmósferas simuladas acaban en cada una.",
       sayLaunch: "Todas juntas: una sola luz.", saySlow: "Empiezan a separarse.", sayBurst: "Aquí se acaba el pronóstico.",
       sayFlap: (name) => `Un aleteo de ${name}.`,
-      song: (key, hi, lo) => `Canción de esta diferencia: ${key}, con ${hi} y ${lo}. Cada vuelta de la mariposa toca una nota de la melodía y el acorde cambia cada cuatro vueltas. El zoom, la rotación y la separación cambian cómo suena.`,
+      song: (key, hi, lo) => `Canción de esta diferencia: ${key}, con ${hi} y ${lo}. Mientras las atmósferas van juntas, cada vuelta toca la siguiente nota del tema; al separarse, la melodía improvisa. El zoom, la rotación y la separación cambian cómo suena.`,
       notes: ["Do", "Do♯", "Re", "Mi♭", "Mi", "Fa", "Fa♯", "Sol", "La♭", "La", "Si♭", "Si"],
       modes: { maj: "mayor", min: "menor" },
       timbres: { epiano: "piano eléctrico", celesta: "celesta", glass: "cristal", kalimba: "kalimba", harp: "arpa", bell: "campanas" },
@@ -589,7 +590,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       about: "This is the convection model Edward Lorenz published in 1963. Each color is one atmosphere; stacked together they look white. If one wing were rain and the other sun, the counter would be the forecast: how many of the simulated atmospheres end up on each.",
       sayLaunch: "All together: a single light.", saySlow: "They start to drift apart.", sayBurst: "The forecast ends here.",
       sayFlap: (name) => `A wing flap of ${name}.`,
-      song: (key, hi, lo) => `This difference's song: ${key}, on ${hi} and ${lo}. Each loop of the butterfly plays one note of the melody, and the chord changes every four loops. Zoom, rotation and separation change how it sounds.`,
+      song: (key, hi, lo) => `This difference's song: ${key}, on ${hi} and ${lo}. While the atmospheres stay together, each loop plays the next note of the theme; once they split, the melody improvises. Zoom, rotation and separation change how it sounds.`,
       notes: ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"],
       modes: { maj: "major", min: "minor" },
       timbres: { epiano: "electric piano", celesta: "celesta", glass: "glass", kalimba: "kalimba", harp: "harp", bell: "bells" },
@@ -673,6 +674,10 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   // entre atmósferas alarga el eco.
   const music = (() => {
     const NV = 5;                         // la guía y cuatro acompañantes
+    // Tema original, en grados de la escalera contados desde la tónica; cuatro notas por acorde.
+    // Cada frase abre con un salto de sexta y baja por pasos. Suena mientras las atmósferas van juntas.
+    const THEME = [0, 4, 3, 2, 2, 1, 2, 3, 0, 4, 3, 5, 3, 4, 2, 1];
+    const BROKEN = [0, 2, 3, 2];           // acorde quebrado: fundamental, quinta, octava, quinta
     const MAJ = [0, 2, 4, 5, 7, 9, 11], MIN = [0, 2, 3, 5, 7, 8, 10], PMAJ = [0, 2, 4, 7, 9], PMIN = [0, 3, 5, 7, 10];
     // raíz, modo, progresión (grados, cuatro vueltas cada uno), timbre del ala derecha, timbre del ala izquierda
     const SONGS = {
@@ -697,13 +702,14 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     const za = new Float64Array(NV), zb = new Float64Array(NV), xs = new Float64Array(NV);
     const idx = new Int32Array(NV), rep = new Int32Array(NV), loops = new Int32Array(NV);
     const pending = [];
-    let ctx = null, on = false, master, dry, send, toneLP, wetG, fbG, pad = [], song = SONGS["-6"], ladder = [], chordK = 0, lastSpark = 0;
+    let ctx = null, on = false, master, dry, send, toneLP, wetG, fbG, pad = [], song = SONGS["-6"], ladder = [], chordK = 0, lastSpark = 0, tonic = 0, themeI = 0, botI = 0, lastBot = 0;
     const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
     const scale = () => (song[1] === "maj" ? MAJ : MIN);
     const chordPcs = (k) => [0, 2, 4].map((i) => (song[0] + scale()[(song[2][k % 4] + i) % 7]) % 12);
     function build() {                    // la escalera de notas de la melodía, dos octavas
       const pent = song[1] === "maj" ? PMAJ : PMIN; ladder = [];
       for (let m = 55; m <= 79; m++) if (pent.includes((m - song[0] + 120) % 12)) ladder.push(m);
+      tonic = ladder.findIndex((m) => (m - song[0]) % 12 === 0);
       idx.fill(Math.floor(ladder.length / 2)); rep.fill(0);
     }
     build();
@@ -776,7 +782,9 @@ button[aria-pressed="true"] { border-color: var(--ink); }
         if (on) setPad(ctx.currentTime);
         return on;
       },
-      setSong(e) { song = SONGS[e] || SONGS["-6"]; build(); chordK = 0; loops.fill(0); if (on) setPad(ctx.currentTime); },
+      setSong(e) { song = SONGS[e] || SONGS["-6"]; build(); this.reset(); },
+      // Cada lanzamiento y cada aleteo empiezan el tema y la progresión desde el principio.
+      reset() { chordK = 0; loops.fill(0); themeI = 0; botI = 0; if (on) setPad(ctx.currentTime); },
       song: () => song,
       // Una vez por fila de simulación: detecta lo alto de cada vuelta y los cambios de ala.
       // Corre siempre, con sonido o sin él, porque cada nota también se ve.
@@ -784,6 +792,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
         for (let v = 0; v < NV; v++) {
           const z = Z[v], x = X[v];
           if (v === 0 && x * xs[v] < 0) pending.push([0, 2, 0, x]);
+          if (v === 0 && zb[v] < za[v] && zb[v] <= z && zb[v] < 24) pending.push([0, 3, zb[v], x]);
           if (zb[v] > za[v] && zb[v] >= z && zb[v] > 24) pending.push([v, 1, zb[v], x]);
           za[v] = zb[v]; zb[v] = z; xs[v] = x;
         }
@@ -795,6 +804,15 @@ button[aria-pressed="true"] { border-color: var(--ink); }
         const now = on ? ctx.currentTime + 0.012 : 0;
         for (const [v, what, zv, x] of pending) {
           const right = x >= 0, pan = (right ? panR : panL) * 0.7;
+          if (what === 3) {                 // lo bajo de la vuelta: una nota del acorde quebrado, como una mano izquierda
+            if (on && now - lastBot > 0.2) {
+              lastBot = now;
+              const pcs = chordPcs(chordK), root = 48 + pcs[0], triad = [];
+              for (let m = root; m < root + 17; m++) if (pcs.includes(m % 12)) triad.push(m);
+              note(now, triad[BROKEN[botI++ % 4]], 0.04, pan * 0.4, song[4]);
+            }
+            continue;
+          }
           if (what === 2) {                 // cambio de ala: destello, sin amontonarse
             beat(2, 0, false, chordK);
             if (on && now - lastSpark > 1.2) { lastSpark = now; note(now, ladder[ladder.length - 1 - Math.floor(Math.random() * 3)] + 24, 0.02, pan, "glass"); }
@@ -802,11 +820,13 @@ button[aria-pressed="true"] { border-color: var(--ink); }
           }
           if (v === 0) {
             const strong = loops[0] % 4 === 0;
-            if (strong) { if (loops[0] > 0) chordK++; if (on) { setPad(now); bass(now, chordPcs(chordK)[0]); } }
+            if (strong) { if (loops[0] > 0) chordK++; botI = 0; if (on) { setPad(now); bass(now, chordPcs(chordK)[0]); } }
             loops[0]++;
             // La melodía no salta de octava al cambiar de ala: el ala decide el lado, y en la
             // izquierda se dobla una octava abajo con el segundo timbre, que la oscurece.
-            const m = pick(0, zv, strong);
+            let m;
+            if (sep <= 0.5) { idx[0] = tonic + THEME[themeI++ % THEME.length]; rep[0] = 0; m = ladder[idx[0]]; }   // juntas: el tema
+            else m = pick(0, zv, strong);                                                                      // separadas: improvisa
             if (on) { note(now, m + 12, strong ? 0.13 : 0.1, pan, song[3]); if (!right) note(now, m, 0.045, pan, song[4]); }
             beat(0, 0, strong, chordK);
           } else if (sep > 0.5 && loops[v]++ % 2 === 0) {   // acompañantes: ya separadas, bajito, por debajo y una vuelta sí y otra no
