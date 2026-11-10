@@ -38,7 +38,7 @@ Cada lanzamiento anota cuánto tiempo siguieron juntas las atmósferas. Al proba
 
 Tocar la mariposa da un aleteo: todas las atmósferas colapsan en una sola luz, desde donde esté una de ellas, y vuelven a separarse.
 
-El sonido es opcional y sigue la misma idea que el del video, con una diferencia: cada valor de la perilla tiene su propia canción. Son doce, con tonalidad, progresión de acordes y timbres distintos (piano eléctrico, celesta, kalimba, cristal, arpa y campanas, por síntesis FM). Además, el zoom la hace más brillante o más lejana, la rotación mueve cada ala en el estéreo según dónde se ve y la separación entre atmósferas alarga el eco.
+El sonido es opcional y sigue la misma idea que el del video: mientras las atmósferas van juntas suena el tema, y al separarse la melodía improvisa. Además, cada nota se ve: suelta una onda y da un pulso de brillo. Hay una diferencia con el video: cada valor de la perilla tiene su propia canción. Son doce, con tonalidad, progresión de acordes y timbres distintos (piano eléctrico, celesta, kalimba, cristal, arpa y campanas, por síntesis FM). Además, el zoom la hace más brillante o más lejana, la rotación mueve cada ala en el estéreo según dónde se ve y la separación entre atmósferas alarga el eco.
 
 La página está en español y en inglés, con un botón para cambiar.
 
@@ -57,14 +57,16 @@ Para publicarla con GitHub Pages basta con servir la carpeta `docs/`. El fuente 
 
 ## La música la toca la mariposa
 
-`sound.py` saca una melodía de la atmósfera central: una nota en lo alto de cada vuelta, en el instante en que ocurre.
+Hay un tema original de 16 notas, compuesto para este proyecto: cada frase abre con un salto de sexta y baja por pasos. `sound.py` hace que lo toque la atmósfera central.
 
-- **Melodía por pasos:** la escala es pentatónica, así que ninguna nota choca, y la melodía se mueve a lo sumo dos grados por nota. Sube si la vuelta fue más grande y baja si fue más pequeña.
-- **Un acorde cada cuatro vueltas:** re, si menor, sol y la, con una nota de bajo en cada cambio. En el cambio la melodía cae en una nota del acorde.
-- **El ala decide el lado:** derecha o izquierda en el estéreo. En el ala izquierda la melodía se dobla una octava abajo con arpa.
-- **Acompañamiento:** mientras las atmósferas coinciden solo se oye esa melodía. Cuando divergen, otras cuatro acompañan en voz baja, cada una con sus propias vueltas.
+- **El tema, mientras van juntas:** cada vuelta al atractor da la siguiente nota del tema, en el instante en que ocurre. El ritmo lo pone el giro; las notas son compuestas.
+- **Mano izquierda:** en lo bajo de cada vuelta suena una nota de acorde quebrado (fundamental, quinta, octava, quinta), con timbre de piano.
+- **Un acorde cada cuatro vueltas:** re, si menor, sol y la, con una nota de bajo en cada cambio.
+- **El ala decide el lado** en el estéreo, y en la izquierda la melodía se dobla una octava abajo.
+- **Al separarse, el tema se disuelve:** la melodía improvisa por pasos sobre la escala pentatónica (sube si la vuelta fue más grande, baja si fue más pequeña) y otras cuatro atmósferas acompañan en voz baja, cada una con sus propias vueltas.
+- **Cierre:** vuelve la primera frase del tema, cada vez más lenta.
 
-El colchón, el glissando de arpa que sube hasta el momento de la divergencia y el acorde abierto de ese momento son composición, no datos.
+El tema, los acordes, el colchón, el glissando de arpa que sube hasta el momento de la divergencia y el cierre son composición, no datos. El tema no cita ninguna obra existente.
 
 ## Uso
 

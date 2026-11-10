@@ -1,20 +1,26 @@
 """
 Banda sonora del efecto mariposa: la musica la toca la mariposa.
 
-Una melodia, tocada por la atmosfera central: una nota en lo alto de cada
-vuelta, en el instante en que ocurre.
+Hay un tema original de 16 notas, compuesto para este proyecto. Mientras las
+atmosferas van juntas, la atmosfera central lo toca: cada vuelta al atractor
+da la siguiente nota del tema, en el instante en que ocurre. El ritmo lo pone
+el giro; las notas son compuestas.
 
-  - La escala es pentatonica (ninguna nota choca) y la melodia se mueve por
-    pasos cortos: sube si la vuelta fue mas grande y baja si fue mas pequena.
+  - En lo bajo de cada vuelta suena una nota de acorde quebrado (fundamental,
+    quinta, octava, quinta), como la mano izquierda de un piano.
   - El acorde cambia cada cuatro vueltas (re, si menor, sol, la), con una nota
-    de bajo, y en ese cambio la melodia cae en una nota del acorde.
+    de bajo.
   - El ala decide de que lado suena; en la izquierda la melodia se dobla una
-    octava abajo con arpa.
-  - Mientras las atmosferas coinciden solo se oye esa melodia. Cuando divergen,
-    otras cuatro acompanan en voz baja, cada una con sus propias vueltas.
+    octava abajo.
+  - Cuando las atmosferas divergen, el tema se disuelve: la melodia pasa a
+    improvisar por pasos sobre la escala pentatonica (sube si la vuelta fue
+    mas grande, baja si fue mas pequena) y otras cuatro atmosferas acompanan
+    en voz baja, cada una con sus propias vueltas.
+  - Al final vuelve la primera frase del tema, lenta, para cerrar.
 
-El colchon, el glissando que sube hasta el momento de la divergencia y el
-acorde abierto de ese momento son composicion, no datos.
+El tema, los acordes, el colchon, el glissando que sube hasta el momento de la
+divergencia y el cierre son composicion, no datos. El tema no cita ninguna
+obra existente.
 
 Uso:
   python sound.py --video out/efecto_mariposa.mp4
@@ -33,6 +39,11 @@ SR = 48000
 NVOICES = 20
 CYCLE = ("D", "Bm", "G", "A")        # un acorde cada cuatro vueltas de la atmosfera central
 LADDER = [m for m in range(55, 80) if m % 12 in (2, 4, 6, 9, 11)]   # re mayor pentatonica, dos octavas
+# Tema original, en grados de la escalera contados desde la tonica. Cuatro notas por acorde:
+# cada frase abre con un salto de sexta y baja por pasos.
+THEME = (0, 4, 3, 2,  2, 1, 2, 3,  0, 4, 3, 5,  3, 4, 2, 1)
+TONIC = LADDER.index(62)
+BROKEN = (0, 2, 3, 2)                # acorde quebrado: fundamental, quinta, octava, quinta
 
 # Re mayor. Clases de altura de cada acorde: tres notas del acorde y una de color.
 CHORDS = {
@@ -47,6 +58,7 @@ TIMBRE = {
     "harp": ([(1.0, 1.00, 0.95), (2.0, 0.45, 0.50), (3.0, 0.22, 0.30), (4.0, 0.10, 0.20)], 0.004),
     "spark": ([(1.0, 1.00, 0.40), (3.0, 0.18, 0.08)], 0.002),
     "bass": ([(1.0, 1.00, 1.10), (2.0, 0.55, 0.80), (3.0, 0.28, 0.50)], 0.025),
+    "piano": ([(1.0, 1.00, 1.60), (2.0, 0.50, 1.10), (3.0, 0.24, 0.80), (4.0, 0.12, 0.50), (5.0, 0.06, 0.35), (6.01, 0.03, 0.25)], 0.004),
 }
 
 
@@ -164,10 +176,10 @@ def synth(sub, ci, ev, fps, seed=5):
     lead_v = voices[NVOICES // 2]
     xl, zl = sub[:nsteps + 1, lead_v, 0], sub[:nsteps + 1, lead_v, 2]
     st = Stepper()
-    plan, count, k, loops, burst_done = [], 0, 0, 0, False
+    plan, count, k, loops, nth, burst_done = [], 0, 0, 0, 0, False
     for p in tops(lead_v):
         tn = when(int(p))
-        if tn > te - 0.3:
+        if tn > te - 3.6:                            # el cierre es el tema, no la improvisacion
             break
         if not burst_done and tn >= tb:              # al abrirse la luz la armonia vuelve a re
             burst_done, k, loops = True, 0, 0
@@ -178,17 +190,41 @@ def synth(sub, ci, ev, fps, seed=5):
                 k += 1
             plan.append((tn, CYCLE[k % 4]))
         loops += 1
-        chord = CYCLE[k % 4]
-        if tn >= te - 3.4:
-            chord = "D"
-        midi = st.pick(zl[p], chord if strong else None)
+        if nth < len(THEME) and tn < ts:             # juntas: la mariposa toca el tema
+            st.i, st.rep = TONIC + THEME[nth], 0
+            midi = LADDER[st.i]
+        else:                                        # separandose: improvisa por pasos
+            midi = st.pick(zl[p], CYCLE[k % 4] if strong else None)
+        nth += 1
         pan = 0.5 if xl[p] >= 0 else -0.5
-        mx.note("lead", tn, midi + 12, 1.0 if strong else 0.8, pan, "celesta", 0.0)
+        mx.note("lead", tn, midi + 12, 1.0 if strong else 0.8, pan, "piano", 0.0)
         if xl[p] < 0:                                 # ala izquierda: se dobla una octava abajo
-            mx.note("lead", tn, midi, 0.45, pan, "harp", 0.0)
+            mx.note("lead", tn, midi, 0.4, pan, "piano", 0.0)
         count += 1
     plan = [(t0, c) for t0, c in plan if t0 < te - 3.6] + [(te - 3.4, "D")]
     plan.sort()
+
+    # --- mano izquierda: en lo bajo de cada vuelta, una nota del acorde quebrado ---
+    bots = np.nonzero((zl[1:-1] < zl[:-2]) & (zl[1:-1] <= zl[2:]) & (zl[1:-1] < 24.0))[0] + 1
+    nb, prev_ch = 0, None
+    for p in bots:
+        tn = when(int(p))
+        if tn > te - 3.6:
+            break
+        ch = chord_at(plan, tn)
+        if ch != prev_ch:
+            nb, prev_ch = 0, ch
+        root = CHORDS[ch]["bass"] + 12
+        triad = [m for m in range(root, root + 17) if m % 12 in CHORDS[ch]["pcs"][:3]]
+        mx.note("cloud", tn, triad[BROKEN[nb % 4]], 0.5, 0.25 if xl[p] >= 0 else -0.25, "piano", 0.0)
+        nb += 1
+
+    # --- cierre: vuelve la primera frase del tema, cada vez mas lenta ---
+    tr = te - 3.25
+    for i, gap in enumerate((0.0, 0.42, 0.44, 0.48, 0.58)):
+        tr += gap
+        deg = THEME[i] if i < 4 else 0
+        mx.note("lead", tr, LADDER[TONIC + deg] + 12, 0.9, 0.0, "piano", 0.0)
 
     # --- destellos: cuando la atmosfera central cambia de ala, sin amontonarse ---
     sw = np.nonzero(np.sign(xl[1:]) != np.sign(xl[:-1]))[0] + 1
