@@ -79,7 +79,11 @@ body { background: var(--bg); color: var(--ink); font: 400 14.5px/1.5 var(--body
 }
 .odds div { display: grid; gap: 2px; }
 .odds dt { font: 500 11px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; }
-.odds dd { margin: 0; font: 500 28px/1 var(--mono); font-variant-numeric: tabular-nums; }
+/* --k is the light each note leaves on its wing's counter; the script sets it. */
+.odds div { --k: 0; }
+.odds dt { opacity: calc(0.7 + var(--k) * 0.3); }
+.odds dd { margin: 0; font: 500 28px/1 var(--mono); font-variant-numeric: tabular-nums; transform-origin: left center;
+  text-shadow: 0 0 calc(var(--k) * 24px) currentColor; transform: scale(calc(1 + var(--k) * 0.07)); }
 .odds .rain { color: var(--rain); }
 .odds .sun { color: var(--sun); }
 .lang {
@@ -136,7 +140,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
 .readouts dt { font: 500 11px/1.3 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
 .readouts dd { margin: 0; font: 500 20px/1.1 var(--mono); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .readouts small { font: 400 12px/1.3 var(--body); color: var(--muted); }
-#chart { width: 100%; height: 150px; display: block; }
+#chart { width: 100%; height: 200px; display: block; }
 .insight { margin: 0; text-wrap: pretty; }
 .note { margin: 0; color: var(--muted); font-size: 13px; text-wrap: pretty; }
 .note a { color: inherit; text-underline-offset: 3px; }
@@ -153,7 +157,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   .plume-label .wide { display: none; }
   .say { bottom: calc(var(--plume-h) + 60px); }
 }
-@media (prefers-reduced-motion: reduce) { .say, .intro, .panel, .plume-label, .odds { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .say, .intro, .panel, .plume-label, .odds { transition: none; } .odds dd { transform: none; } }
 </style>
 </head>
 <body>
@@ -176,8 +180,8 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     <div class="label plume-label"><span data-t="plume">Ensemble forecast</span><span class="wide" data-t="plumeWide"> · one line per atmosphere</span></div>
     <div class="plume-slot" id="slot"></div>
     <dl class="odds">
-      <div class="rain"><dt data-t="rain">Rain</dt><dd id="rain">100 %</dd></div>
-      <div class="sun"><dt data-t="sun">Sun</dt><dd id="sun">0 %</dd></div>
+      <div class="rain" id="oddsRain"><dt data-t="rain">Rain</dt><dd id="rain">100 %</dd></div>
+      <div class="sun" id="oddsSun"><dt data-t="sun">Sun</dt><dd id="sun">0 %</dd></div>
     </dl>
     <div class="nogl" id="nogl" data-t="nogl" hidden>This browser does not have WebGL 2, which is needed to draw the simulation.</div>
   </section>
@@ -209,7 +213,8 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     </div>
 
     <div class="group">
-      <p class="note"><a href="https://github.com/meruw/butterfly-effect" data-t="credit">Lorenz, 1963 · code</a></p>
+      <p class="note" data-t="about">This is the convection model Edward Lorenz published in 1963. Each color is one atmosphere; stacked together they look white. If one wing were rain and the other sun, the counter would be the forecast: how many of the simulated atmospheres end up on each.</p>
+      <p class="note"><a href="https://github.com/meruw/butterfly-effect" data-t="credit">Code on GitHub</a></p>
     </div>
   </aside>
 </div>
@@ -510,7 +515,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   // brightness each note leaves; tint is the color of the background glow, which follows the chord.
   const ringA = new Float32Array(RN * 4), ringB = new Float32Array(RN * 4);
   for (let i = 0; i < RN; i++) ringA[i * 4 + 2] = -1;
-  let ringI = 0, kick = 0, flash = 0, starKick = 0;
+  let ringI = 0, kick = 0, flash = 0, starKick = 0, lightR = 0, lightL = 0, shownR = -1, shownL = -1;
   const CH_COL = [[1.0, 0.82, 0.45], [0.72, 0.55, 1.0], [0.45, 0.85, 1.0], [1.0, 0.5, 0.75]];
   const tint = [0.022, 0.028, 0.060], tintGoal = [0.022, 0.028, 0.060];
   function ring(u, v, strength, speed, r, g, b) {
@@ -522,6 +527,9 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   function onBeat(kind, v, strong, chord) {
     if (kind === 2) { starKick = 1; return; }
     const uv = toUv(X[v], Y[v], Z[v]);
+    // The counter of the wing the note was played on lights up: right wing is rain, left wing is sun.
+    const glow = kind === 1 ? 0.35 : strong ? 1 : 0.65;
+    if (X[v] >= 0) lightR = Math.max(lightR, glow); else lightL = Math.max(lightL, glow);
     if (kind === 1) { ring(uv[0], uv[1], 0.2, 0.34, colData[v * 4], colData[v * 4 + 1], colData[v * 4 + 2]); return; }
     const c = CH_COL[chord % 4];
     kick = Math.max(kick, strong ? 1 : 0.45);
@@ -630,7 +638,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       music.burst();
       buzz(28);
     }
-    if (horizon === null && sep > 1) { horizon = simT; if (!flap) { runs.push({ e: exp10, t: horizon }); drawChart(); insight(); } }
+    if (horizon === null && sep > 1) { horizon = simT; runs.push({ e: exp10, t: horizon, flap }); drawChart(); insight(); }
   }
 
   // ---------- copy, in Spanish and English ----------
@@ -647,7 +655,8 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       experiment: "Tu experimento",
       chartNote: "Vertical: cuánto tiempo siguieron juntas. Horizontal: la diferencia inicial.",
       insight2: (x) => `1.000 veces más precisión: solo +${x} de tiempo.`,
-      credit: "Lorenz, 1963 · código",
+      about: "Es el modelo de convección que Edward Lorenz publicó en 1963. Cada color es una atmósfera; superpuestas se ven blancas. Si un ala fuera lluvia y la otra sol, el marcador sería el pronóstico: cuántas de las atmósferas simuladas acaban en cada una.",
+      credit: "Código en GitHub",
       sayLaunch: "De nuevo, una sola luz.", saySlow: "Y aun así, empiezan a alejarse.", sayBurst: "Aquí termina lo que se puede saber.",
       sayFlap: (name) => `Un aleteo de ${name}.`,
       hook: "Basta un aleteo para que el mañana sea otro.", begin: "Empezar con sonido", beginMute: "Sin sonido", skip: "Saltar",
@@ -655,7 +664,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       intro2: "Los separa apenas una millonésima.",
       intro3: "Ahora el aleteo es tuyo: toca la mariposa.", thousands: ".",
       names: { "-1": "una décima", "-2": "una centésima", "-3": "una milésima", "-4": "una diezmilésima", "-5": "una cienmilésima", "-6": "una millonésima", "-7": "una diezmillonésima", "-8": "una cienmillonésima", "-9": "una milmillonésima", "-10": "una diezmilmillonésima", "-11": "una cienmilmillonésima", "-12": "una billonésima" },
-      axis: ["billonésima", "millonésima", "décima"], dec: ",", other: "EN", otherAria: "Switch to English",
+      axis: ["billonésima", "millonésima", "décima"], legend: ["lanzamiento", "aleteo"], dec: ",", other: "EN", otherAria: "Switch to English",
     },
     en: {
       h1: "Butterfly Effect",
@@ -669,7 +678,8 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       experiment: "Your experiment",
       chartNote: "Vertical: how long they stayed together. Horizontal: the initial difference.",
       insight2: (x) => `1,000× more precision: only +${x} time.`,
-      credit: "Lorenz, 1963 · code",
+      about: "This is the convection model Edward Lorenz published in 1963. Each color is one atmosphere; stacked together they look white. If one wing were rain and the other sun, the counter would be the forecast: how many of the simulated atmospheres end up on each.",
+      credit: "Code on GitHub",
       sayLaunch: "Once more, a single light.", saySlow: "And still, they begin to drift.", sayBurst: "Here ends what can be known.",
       sayFlap: (name) => `A wing flap of ${name}.`,
       hook: "One wingbeat is enough to change tomorrow.", begin: "Start with sound", beginMute: "Without sound", skip: "Skip",
@@ -677,7 +687,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       intro2: "Barely a millionth sets them apart.",
       intro3: "Now the wingbeat is yours: tap the butterfly.", thousands: ",",
       names: { "-1": "one tenth", "-2": "one hundredth", "-3": "one thousandth", "-4": "one ten-thousandth", "-5": "one hundred-thousandth", "-6": "one millionth", "-7": "one ten-millionth", "-8": "one hundred-millionth", "-9": "one billionth", "-10": "one ten-billionth", "-11": "one hundred-billionth", "-12": "one trillionth" },
-      axis: ["trillionth", "millionth", "tenth"], dec: ".", other: "ES", otherAria: "Cambiar a español",
+      axis: ["trillionth", "millionth", "tenth"], legend: ["launch", "wingbeat"], dec: ".", other: "ES", otherAria: "Cambiar a español",
     },
   };
   let lang = "";
@@ -697,7 +707,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   }
   function fit() {
     const best = new Map();
-    for (const r of runs) best.set(r.e, r.t);
+    for (const r of runs) if (!r.flap) best.set(r.e, r.t);     // only launches from the usual point are comparable
     const pts = [...best.entries()];
     if (pts.length < 2) return null;
     const n = pts.length, mx = pts.reduce((s, p) => s + p[0], 0) / n, my = pts.reduce((s, p) => s + p[1], 0) / n;
@@ -720,25 +730,83 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   }
 
   // ---------- experiment chart ----------
+  // x: the initial difference, one tick per power of ten, in the colors of the atmospheres.
+  // y: how long they stayed together. Launches are filled dots and wingbeats hollow ones.
+  // The run in progress climbs as a live column whose head pulses with the music.
   const root = getComputedStyle(document.documentElement), css = (name) => root.getPropertyValue(name).trim();
   const ccv = $("chart"), cctx = ccv.getContext("2d");
+  const rgb = (e) => color((e + 12) / 11).map((v) => Math.round(Math.min(1, v) * 255)).join(",");
+  let chartSeen = true;
+  if ("IntersectionObserver" in window) new IntersectionObserver((en) => { chartSeen = en[0].isIntersecting; }).observe(ccv);
   function drawChart() {
     const dpr = Math.min(devicePixelRatio || 1, 2), w = Math.round(ccv.clientWidth * dpr), h = Math.round(ccv.clientHeight * dpr);
+    if (!w || !h) return;
     if (ccv.width !== w || ccv.height !== h) { ccv.width = w; ccv.height = h; }
-    const ink = css("--ink"), muted = css("--muted"), line = css("--line");
-    const L = 30 * dpr, R = 8 * dpr, Tp = 8 * dpr, B = 22 * dpr, YM = 40;
-    const px = (e) => L + (e + 12) / 11 * (w - L - R), py = (t) => h - B - Math.min(t, YM) / YM * (h - Tp - B);
+    const muted = css("--muted"), line = css("--line"), ink = css("--ink");
+    const L = 26 * dpr, R = 12 * dpr, Tp = 14 * dpr, B = 46 * dpr, YM = 40;
+    const px = (e) => L + (e + 12) / 11 * (w - L - R), py = (v) => h - B - Math.min(v, YM) / YM * (h - Tp - B);
     cctx.clearRect(0, 0, w, h);
-    cctx.font = `${10.5 * dpr}px ${css("--mono")}`; cctx.fillStyle = muted; cctx.strokeStyle = line; cctx.lineWidth = dpr;
-    cctx.textAlign = "right"; cctx.textBaseline = "middle";
-    for (const t of [0, 20, 40]) { cctx.beginPath(); cctx.moveTo(L, py(t)); cctx.lineTo(w - R, py(t)); cctx.stroke(); cctx.fillText(String(t), L - 6 * dpr, py(t)); }
-    cctx.textBaseline = "alphabetic";
+    cctx.font = `${10.5 * dpr}px ${css("--mono")}`;
+    cctx.lineWidth = dpr; cctx.strokeStyle = line; cctx.fillStyle = muted; cctx.textAlign = "right"; cctx.textBaseline = "middle";
+    for (const v of [0, 10, 20, 30, 40]) {
+      cctx.globalAlpha = v % 20 ? 0.45 : 1;
+      cctx.beginPath(); cctx.moveTo(L, py(v)); cctx.lineTo(w - R, py(v)); cctx.stroke();
+      if (v % 20 === 0) cctx.fillText(String(v), L - 7 * dpr, py(v));
+    }
+    cctx.globalAlpha = 1;
+    for (let e = -12; e <= -1; e++) { cctx.fillStyle = `rgba(${rgb(e)},0.95)`; cctx.fillRect(px(e) - dpr, h - B + 4 * dpr, 2 * dpr, 5 * dpr); }
+    cctx.fillStyle = muted; cctx.textBaseline = "alphabetic";
     const ax = t("axis");
-    for (const [e, label, align] of [[-12, ax[0], "left"], [-6, ax[1], "center"], [-1, ax[2], "right"]]) { cctx.textAlign = align; cctx.fillText(label, px(e), h - 5 * dpr); }
+    for (const [e, label, align] of [[-12, ax[0], "left"], [-6, ax[1], "center"], [-1, ax[2], "right"]]) { cctx.textAlign = align; cctx.fillText(label, px(e), h - B + 22 * dpr); }
+    // legend: filled dot = launch, hollow dot = wingbeat
+    const lg = t("legend"), ly = h - 5 * dpr;
+    cctx.textAlign = "left"; cctx.fillStyle = ink; cctx.strokeStyle = ink; cctx.lineWidth = 1.4 * dpr;
+    cctx.beginPath(); cctx.arc(L + 4 * dpr, ly - 3.5 * dpr, 3 * dpr, 0, 7); cctx.fill();
+    cctx.fillStyle = muted; cctx.fillText(lg[0], L + 12 * dpr, ly);
+    const x2 = L + 12 * dpr + cctx.measureText(lg[0]).width + 16 * dpr;
+    cctx.beginPath(); cctx.arc(x2 + 4 * dpr, ly - 3.5 * dpr, 3 * dpr, 0, 7); cctx.stroke();
+    cctx.fillText(lg[1], x2 + 12 * dpr, ly);
+
+    cctx.save();
+    cctx.beginPath(); cctx.rect(L - 8 * dpr, Tp - 10 * dpr, w - L - R + 18 * dpr, h - Tp - B + 12 * dpr); cctx.clip();
+    // a guide where the knob is
+    cctx.strokeStyle = `rgba(${rgb(exp10)},0.4)`; cctx.lineWidth = dpr; cctx.setLineDash([2 * dpr, 4 * dpr]);
+    cctx.beginPath(); cctx.moveTo(px(exp10), py(0)); cctx.lineTo(px(exp10), py(YM)); cctx.stroke(); cctx.setLineDash([]);
+    // the trend, in the spectrum of the atmospheres
     const f = fit();
-    if (f) { cctx.strokeStyle = muted; cctx.setLineDash([4 * dpr, 4 * dpr]); cctx.beginPath(); cctx.moveTo(px(-12), py(f.m * -12 + f.c)); cctx.lineTo(px(-1), py(f.m * -1 + f.c)); cctx.stroke(); cctx.setLineDash([]); }
-    cctx.fillStyle = ink; cctx.strokeStyle = ink; cctx.lineWidth = 1.4 * dpr;
-    for (const r of runs) { cctx.beginPath(); cctx.arc(px(r.e), py(r.t), 3.4 * dpr, 0, 7); cctx.fill(); }
+    if (f) {
+      const g = cctx.createLinearGradient(px(-12), 0, px(-1), 0);
+      for (let e = -12; e <= -1; e++) g.addColorStop((e + 12) / 11, `rgba(${rgb(e)},0.95)`);
+      cctx.strokeStyle = g; cctx.lineWidth = 2 * dpr; cctx.lineCap = "round"; cctx.shadowColor = "rgba(150,175,255,0.55)"; cctx.shadowBlur = 9 * dpr;
+      cctx.beginPath(); cctx.moveTo(px(-12), h - B - (f.m * -12 + f.c) / YM * (h - Tp - B)); cctx.lineTo(px(-1), h - B - (f.m * -1 + f.c) / YM * (h - Tp - B)); cctx.stroke();
+      cctx.shadowBlur = 0;
+    }
+    // the run in progress
+    if (horizon === null && intro.phase !== "landing") {
+      const x = px(exp10), y = py(simT), c = rgb(exp10);
+      const g = cctx.createLinearGradient(0, py(0), 0, y);
+      g.addColorStop(0, `rgba(${c},0)`); g.addColorStop(1, `rgba(${c},0.8)`);
+      cctx.strokeStyle = g; cctx.lineWidth = 2 * dpr; cctx.beginPath(); cctx.moveTo(x, py(0)); cctx.lineTo(x, y); cctx.stroke();
+      cctx.shadowColor = `rgba(${c},0.9)`; cctx.shadowBlur = (8 + 14 * kick) * dpr; cctx.fillStyle = ink;
+      cctx.beginPath(); cctx.arc(x, y, (2.6 + 2.2 * kick) * dpr, 0, 7); cctx.fill(); cctx.shadowBlur = 0;
+    }
+    // finished runs
+    for (const r of runs) {
+      const x = px(r.e), y = py(r.t), c = rgb(r.e);
+      const halo = cctx.createRadialGradient(x, y, 0, x, y, 11 * dpr);
+      halo.addColorStop(0, `rgba(${c},0.45)`); halo.addColorStop(1, `rgba(${c},0)`);
+      cctx.fillStyle = halo; cctx.beginPath(); cctx.arc(x, y, 11 * dpr, 0, 7); cctx.fill();
+      cctx.beginPath(); cctx.arc(x, y, 3.6 * dpr, 0, 7);
+      if (r.flap) { cctx.strokeStyle = `rgb(${c})`; cctx.lineWidth = 1.6 * dpr; cctx.stroke(); }
+      else { cctx.fillStyle = `rgb(${c})`; cctx.fill(); cctx.fillStyle = ink; cctx.beginPath(); cctx.arc(x, y, 1.5 * dpr, 0, 7); cctx.fill(); }
+    }
+    cctx.restore();
+    // the latest result, in numbers
+    const last = runs[runs.length - 1];
+    if (last) {
+      cctx.fillStyle = ink; cctx.textAlign = px(last.e) > w - 40 * dpr ? "right" : px(last.e) < L + 30 * dpr ? "left" : "center";
+      cctx.fillText(fix(last.t, 1), px(last.e), Math.max(11 * dpr, py(last.t) - 9 * dpr));
+    }
   }
 
   // ---------- music: the butterfly plays ----------
@@ -1005,6 +1073,9 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     }
     for (let i = 2; i < RN * 4; i += 4) if (ringA[i] >= 0) ringA[i] = ringA[i] > 3 ? -1 : ringA[i] + dt;
     kick *= Math.exp(-dt / 0.18); flash *= Math.exp(-dt / 0.16); starKick *= Math.exp(-dt / 0.4);
+    lightR *= Math.exp(-dt / 0.28); lightL *= Math.exp(-dt / 0.28);
+    if (Math.abs(lightR - shownR) > 0.02) { shownR = lightR; $("oddsRain").style.setProperty("--k", lightR.toFixed(2)); }
+    if (Math.abs(lightL - shownL) > 0.02) { shownL = lightL; $("oddsSun").style.setProperty("--k", lightL.toFixed(2)); }
     for (let j = 0; j < 3; j++) tint[j] += (tintGoal[j] - tint[j]) * Math.min(1, dt * 2.5);
     if (cam.sway) { cam.t += dt; cam.az = -96 + 14 * Math.sin(cam.t * 0.16); cam.el = 9 + 4 * Math.sin(cam.t * 0.11); }
     updateCamera();
@@ -1078,6 +1149,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     });
 
     if (++uiTick % 6 === 0) readouts();
+    if (chartSeen && uiTick % 3 === 0) drawChart();     // the live column and its pulse
     requestAnimationFrame(frame);
   }
 
