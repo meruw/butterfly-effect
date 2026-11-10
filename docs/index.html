@@ -173,7 +173,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       </div>
     </div>
     <button class="skip" id="skip" type="button" data-t="skip" hidden>Skip</button>
-    <div class="label plume-label" data-t="plume">Forecast</div>
+    <div class="label plume-label"><span data-t="plume">Ensemble forecast</span><span class="wide" data-t="plumeWide"> · one line per atmosphere</span></div>
     <div class="plume-slot" id="slot"></div>
     <dl class="odds">
       <div class="rain"><dt data-t="rain">Rain</dt><dd id="rain">100 %</dd></div>
@@ -184,7 +184,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
 
   <aside class="panel" id="panel" aria-label="Controls and readouts" inert>
     <div class="group">
-      <label class="label" for="eps" data-t="epsLabel">Initial difference</label>
+      <label class="label" for="eps" data-t="epsLabel">Initial difference between atmospheres</label>
       <div class="knob-value"><output id="epsNum" for="eps">0.000001</output><span id="epsName">one millionth</span></div>
       <input type="range" id="eps" min="-12" max="-1" step="1" value="-6">
       <div class="buttons">
@@ -192,18 +192,18 @@ button[aria-pressed="true"] { border-color: var(--ink); }
         <button id="sound" type="button" aria-pressed="false">Sound</button>
         <button id="pause" type="button">Pause</button>
       </div>
-      <p class="note" id="song" hidden></p>
     </div>
 
     <div class="group">
       <dl class="readouts">
-        <div><dt data-t="sepNow">Separation</dt><dd id="sep">0.000001</dd></div>
-        <div><dt data-t="together">Time together</dt><dd id="horizon">0.0</dd></div>
+        <div><dt data-t="sepNow">Separation now</dt><dd id="sep">0.000001</dd></div>
+        <div><dt data-t="together">Together for</dt><dd id="horizon">0.0</dd><small id="horizonNote">model time, counting</small></div>
       </dl>
     </div>
 
     <div class="group">
       <div class="label" data-t="experiment">Your experiment</div>
+      <p class="note" data-t="chartNote">Vertical: how long they stayed together. Horizontal: the initial difference.</p>
       <canvas id="chart" aria-label="How long the atmospheres stayed together, by initial difference"></canvas>
       <p class="insight" id="insight" aria-live="polite" hidden></p>
     </div>
@@ -637,13 +637,15 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   const L = {
     es: {
       h1: "Efecto mariposa",
-      plume: "Pronóstico",
+      plume: "Pronóstico por conjuntos", plumeWide: " · una línea por atmósfera",
       rain: "Lluvia", sun: "Sol",
       nogl: "Este navegador no tiene WebGL 2, que hace falta para dibujar la simulación.",
-      epsLabel: "Diferencia inicial",
+      epsLabel: "Diferencia inicial entre atmósferas",
       launch: "Lanzar", sound: "Sonido", mute: "Silenciar", pause: "Pausa", resume: "Seguir",
-      sepNow: "Separación", together: "Tiempo juntas",
+      sepNow: "Separación ahora", together: "Juntas durante",
+      counting: "tiempo del modelo, contando", done: "tiempo del modelo hasta separarse",
       experiment: "Tu experimento",
+      chartNote: "Vertical: cuánto tiempo siguieron juntas. Horizontal: la diferencia inicial.",
       insight2: (x) => `1.000 veces más precisión: solo +${x} de tiempo.`,
       credit: "Lorenz, 1963 · código",
       sayLaunch: "De nuevo, una sola luz.", saySlow: "Y aun así, empiezan a alejarse.", sayBurst: "Aquí termina lo que se puede saber.",
@@ -652,22 +654,20 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       intro1: (n) => `${n} cielos casi idénticos. Juntos son una sola luz.`,
       intro2: "Los separa apenas una millonésima.",
       intro3: "Ahora el aleteo es tuyo: toca la mariposa.", thousands: ".",
-      song: (key, hi, lo) => `♪ ${key} · ${hi} y ${lo}`,
-      notes: ["Do", "Do♯", "Re", "Mi♭", "Mi", "Fa", "Fa♯", "Sol", "La♭", "La", "Si♭", "Si"],
-      modes: { maj: "mayor", min: "menor" },
-      timbres: { epiano: "piano eléctrico", celesta: "celesta", glass: "cristal", kalimba: "kalimba", harp: "arpa", bell: "campanas" },
       names: { "-1": "una décima", "-2": "una centésima", "-3": "una milésima", "-4": "una diezmilésima", "-5": "una cienmilésima", "-6": "una millonésima", "-7": "una diezmillonésima", "-8": "una cienmillonésima", "-9": "una milmillonésima", "-10": "una diezmilmillonésima", "-11": "una cienmilmillonésima", "-12": "una billonésima" },
       axis: ["billonésima", "millonésima", "décima"], dec: ",", other: "EN", otherAria: "Switch to English",
     },
     en: {
       h1: "Butterfly Effect",
-      plume: "Forecast",
+      plume: "Ensemble forecast", plumeWide: " · one line per atmosphere",
       rain: "Rain", sun: "Sun",
       nogl: "This browser does not have WebGL 2, which is needed to draw the simulation.",
-      epsLabel: "Initial difference",
+      epsLabel: "Initial difference between atmospheres",
       launch: "Launch", sound: "Sound", mute: "Mute", pause: "Pause", resume: "Resume",
-      sepNow: "Separation", together: "Time together",
+      sepNow: "Separation now", together: "Together for",
+      counting: "model time, counting", done: "model time until they split",
       experiment: "Your experiment",
+      chartNote: "Vertical: how long they stayed together. Horizontal: the initial difference.",
       insight2: (x) => `1,000× more precision: only +${x} time.`,
       credit: "Lorenz, 1963 · code",
       sayLaunch: "Once more, a single light.", saySlow: "And still, they begin to drift.", sayBurst: "Here ends what can be known.",
@@ -676,10 +676,6 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       intro1: (n) => `${n} almost identical skies. Together, a single light.`,
       intro2: "Barely a millionth sets them apart.",
       intro3: "Now the wingbeat is yours: tap the butterfly.", thousands: ",",
-      song: (key, hi, lo) => `♪ ${key} · ${hi} and ${lo}`,
-      notes: ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"],
-      modes: { maj: "major", min: "minor" },
-      timbres: { epiano: "electric piano", celesta: "celesta", glass: "glass", kalimba: "kalimba", harp: "harp", bell: "bells" },
       names: { "-1": "one tenth", "-2": "one hundredth", "-3": "one thousandth", "-4": "one ten-thousandth", "-5": "one hundred-thousandth", "-6": "one millionth", "-7": "one ten-millionth", "-8": "one hundred-millionth", "-9": "one billionth", "-10": "one ten-billionth", "-11": "one hundred-billionth", "-12": "one trillionth" },
       axis: ["trillionth", "millionth", "tenth"], dec: ".", other: "ES", otherAria: "Cambiar a español",
     },
@@ -692,15 +688,10 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   let sayTimer = 0;
   function say(text, ms) { const el = $("say"); el.textContent = text; el.classList.add("on"); clearTimeout(sayTimer); sayTimer = setTimeout(() => el.classList.remove("on"), ms || 2600); }
   function knob() { $("epsNum").textContent = fix(Math.pow(10, exp10), -exp10); $("epsName").textContent = t("names")[exp10]; }
-  // The song's name shows only while sound is on.
-  function songLine() {
-    const sg = music.song(), tm = t("timbres"), el = $("song");
-    el.hidden = $("sound").getAttribute("aria-pressed") !== "true";
-    el.textContent = t("song")(t("notes")[sg[0]] + " " + t("modes")[sg[1]], tm[sg[3]], tm[sg[4]]);
-  }
   function readouts() {
     $("sep").textContent = fix(sep, 6);
     $("horizon").textContent = fix(horizon === null ? simT : horizon, 1);
+    $("horizonNote").textContent = horizon === null ? t("counting") : t("done");
     const p = Math.round(rain * 100);
     $("rain").textContent = p + " %"; $("sun").textContent = (100 - p) + " %";
   }
@@ -725,7 +716,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     $("lang").textContent = t("other"); $("lang").setAttribute("aria-label", t("otherAria"));
     $("pause").textContent = paused ? t("resume") : t("pause");
     $("sound").textContent = $("sound").getAttribute("aria-pressed") === "true" ? t("mute") : t("sound");
-    knob(); songLine(); readouts(); insight(); drawChart();
+    knob(); readouts(); insight(); drawChart();
   }
 
   // ---------- experiment chart ----------
@@ -970,7 +961,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   canvas.addEventListener("pointercancel", () => { ptr = null; });
   canvas.addEventListener("wheel", (ev) => { ev.preventDefault(); cam.dist = Math.max(60, Math.min(200, cam.dist * Math.exp(ev.deltaY * 0.001))); }, { passive: false });
 
-  $("eps").addEventListener("input", (ev) => { exp10 = Number(ev.target.value); knob(); music.setSong(exp10); songLine(); });
+  $("eps").addEventListener("input", (ev) => { exp10 = Number(ev.target.value); knob(); music.setSong(exp10); });
   $("eps").addEventListener("change", () => launch(0));
   $("launch").addEventListener("click", () => { if (paused) togglePause(); launch(0); });
   $("begin").addEventListener("click", () => beginIntro(true));
@@ -978,7 +969,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   $("skip").addEventListener("click", () => endIntro(true));
   function togglePause() { paused = !paused; $("pause").textContent = paused ? t("resume") : t("pause"); }
   $("pause").addEventListener("click", togglePause);
-  $("sound").addEventListener("click", () => { const on = music.toggle(); $("sound").setAttribute("aria-pressed", String(on)); $("sound").textContent = on ? t("mute") : t("sound"); songLine(); });
+  $("sound").addEventListener("click", () => { const on = music.toggle(); $("sound").setAttribute("aria-pressed", String(on)); $("sound").textContent = on ? t("mute") : t("sound"); });
   $("lang").addEventListener("click", () => { lang = lang === "es" ? "en" : "es"; try { localStorage.setItem("butterfly-lang", lang); } catch (e) { /* no storage */ } applyLang(); });
   document.addEventListener("visibilitychange", () => music.suspend(document.hidden));
   addEventListener("resize", () => { resize(true); drawChart(); });
