@@ -79,11 +79,7 @@ body { background: var(--bg); color: var(--ink); font: 400 14.5px/1.5 var(--body
 }
 .odds div { display: grid; gap: 2px; }
 .odds dt { font: 500 11px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; }
-/* --k is the light each note leaves on its wing's counter; the script sets it. */
-.odds div { --k: 0; }
-.odds dt { opacity: calc(0.7 + var(--k) * 0.3); }
-.odds dd { margin: 0; font: 500 28px/1 var(--mono); font-variant-numeric: tabular-nums; transform-origin: left center;
-  text-shadow: 0 0 calc(var(--k) * 24px) currentColor; transform: scale(calc(1 + var(--k) * 0.07)); }
+.odds dd { margin: 0; font: 500 28px/1 var(--mono); font-variant-numeric: tabular-nums; }
 .odds .rain { color: var(--rain); }
 .odds .sun { color: var(--sun); }
 .lang {
@@ -157,7 +153,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   .plume-label .wide { display: none; }
   .say { bottom: calc(var(--plume-h) + 60px); }
 }
-@media (prefers-reduced-motion: reduce) { .say, .intro, .panel, .plume-label, .odds { transition: none; } .odds dd { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .say, .intro, .panel, .plume-label, .odds { transition: none; } }
 </style>
 </head>
 <body>
@@ -180,8 +176,8 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     <div class="label plume-label"><span data-t="plume">Ensemble forecast</span><span class="wide" data-t="plumeWide"> · one line per atmosphere</span></div>
     <div class="plume-slot" id="slot"></div>
     <dl class="odds">
-      <div class="rain" id="oddsRain"><dt data-t="rain">Rain</dt><dd id="rain">100 %</dd></div>
-      <div class="sun" id="oddsSun"><dt data-t="sun">Sun</dt><dd id="sun">0 %</dd></div>
+      <div class="rain"><dt data-t="rain">Rain</dt><dd id="rain">100 %</dd></div>
+      <div class="sun"><dt data-t="sun">Sun</dt><dd id="sun">0 %</dd></div>
     </dl>
     <div class="nogl" id="nogl" data-t="nogl" hidden>This browser does not have WebGL 2, which is needed to draw the simulation.</div>
   </section>
@@ -392,7 +388,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   const compose = program(FULL_VS, `
     uniform sampler2D uLdr, uGlow, uWide, uStreak;
     uniform vec2 uRes, uPar; uniform float uTime, uWideAmt, uStreakAmt, uStars2, uFlash, uStarKick;
-    uniform vec3 uTint;
+    uniform vec3 uTint; uniform vec4 uShoot, uBand; uniform vec2 uBandLight;
     uniform vec4 uRingA[${RN}], uRingB[${RN}];   // A: center in uv, age in s (negative if free), strength. B: color and speed
     in vec2 vUv; out vec4 o;
     float h1(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -402,6 +398,10 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       float d = length(f - (h2(c) - 0.5) * 0.7);
       float tw = 0.55 + 0.45 * sin(uTime * (0.8 + 2.6 * h1(c + 7.0)) + 40.0 * h1(c + 3.0));
       return step(0.92, h1(c)) * tw * smoothstep(0.085, 0.0, d);
+    }
+    float vn(vec2 p){
+      vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+      return mix(mix(h1(i), h1(i + vec2(1.0, 0.0)), f.x), mix(h1(i + vec2(0.0, 1.0)), h1(i + vec2(1.0, 1.0)), f.x), f.y);
     }
     void main(){
       vec2 asp = vec2(uRes.x / uRes.y, 1.0), off = vec2(0.0);
@@ -423,6 +423,26 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       vec2 q = vUv - vec2(0.5, 0.56);
       float r = length(q) * 1.7;
       vec3 bg = vec3(0.020, 0.024, 0.051) + exp(-r * r * 1.3) * uTint;
+      // veils of light in the chord's color and its complement: noise folded by more noise,
+      // so they drift and curl like slow weather instead of sitting still
+      vec2 vp = vUv * asp * 1.5 + uPar * 0.6; float vt = uTime * 0.04;
+      vec2 fold = vec2(vn(vp * 1.3 + vec2(vt, -vt * 0.7)), vn(vp * 1.3 + vec2(5.2 - vt * 0.8, 1.3 + vt)));
+      float veil = vn(vp + 1.9 * fold + vec2(0.0, vt * 0.5));
+      if (uStars2 > 0.5) veil = veil * 0.72 + vn(vp * 2.4 - 1.5 * fold + 7.0) * 0.28;
+      veil = smoothstep(0.36, 0.92, veil);
+      bg += veil * mix(uTint, uTint.bgr, fold.x) * (1.5 + 0.9 * uStarKick);
+      // Backlight of the forecast chart: each note breathes light in behind the lines from the
+      // "now" edge, in the chord's color. The lines themselves are left alone.
+      vec2 bp = (vUv - uBand.xy) / uBand.zw;
+      float bx = smoothstep(-0.08, 0.04, bp.x) * (1.0 - smoothstep(1.0, 1.12, bp.x)) * exp(-(1.0 - bp.x) * 1.5);
+      vec2 by = exp(-pow((vec2(bp.y) - vec2(0.76, 0.24)) / 0.34, vec2(2.0)));
+      bg += bx * dot(by, min(uBandLight, 1.3)) * normalize(uTint + 1e-4) * 0.34;
+      if (uShoot.w >= 0.0) {            // shooting star: a short streak that fades behind its head
+        vec2 dir = vec2(cos(uShoot.z), sin(uShoot.z)), rel = (vUv - uShoot.xy) * asp - dir * uShoot.w * 0.24;
+        float along = dot(rel, dir), across = dot(rel, vec2(-dir.y, dir.x));
+        float tail = smoothstep(-0.08, 0.0, along) * step(along, 0.0);
+        bg += tail * exp(-across * across / 0.0000018) * sin(min(uShoot.w, 1.0) * 3.1416) * vec3(0.85, 0.92, 1.0) * 0.26;
+      }
       vec2 su = vUv * asp + uPar;
       bg += (stars(su, 30.0) * 0.50 + stars(su * 1.9 + 3.1, 30.0) * 0.28 * uStars2) * vec3(0.80, 0.88, 1.0) * (1.0 + 1.6 * uStarKick);
       c = 1.0 - (1.0 - clamp(c, 0.0, 1.0)) * (1.0 - bg);
@@ -515,7 +535,11 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   // brightness each note leaves; tint is the color of the background glow, which follows the chord.
   const ringA = new Float32Array(RN * 4), ringB = new Float32Array(RN * 4);
   for (let i = 0; i < RN; i++) ringA[i * 4 + 2] = -1;
-  let ringI = 0, kick = 0, flash = 0, starKick = 0, lightR = 0, lightL = 0, shownR = -1, shownL = -1;
+  let ringI = 0, kick = 0, flash = 0, starKick = 0, lightUp = 0, lightLo = 0;
+  // The chart's backlight: side 1 lights the upper half (rain), -1 the lower half (sun), 0 both.
+  function pulse(side, strength) { if (side >= 0) lightUp = Math.max(lightUp, strength); if (side <= 0) lightLo = Math.max(lightLo, strength); }
+  const shoot = [0.5, 0.5, 0, -1];      // shooting star: start (uv), angle, age
+  let nextShoot = 12 + Math.random() * 10;
   const CH_COL = [[1.0, 0.82, 0.45], [0.72, 0.55, 1.0], [0.45, 0.85, 1.0], [1.0, 0.5, 0.75]];
   const tint = [0.022, 0.028, 0.060], tintGoal = [0.022, 0.028, 0.060];
   function ring(u, v, strength, speed, r, g, b) {
@@ -527,9 +551,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   function onBeat(kind, v, strong, chord) {
     if (kind === 2) { starKick = 1; return; }
     const uv = toUv(X[v], Y[v], Z[v]);
-    // The counter of the wing the note was played on lights up: right wing is rain, left wing is sun.
-    const glow = kind === 1 ? 0.35 : strong ? 1 : 0.65;
-    if (X[v] >= 0) lightR = Math.max(lightR, glow); else lightL = Math.max(lightL, glow);
+    pulse(X[v] >= 0 ? 1 : -1, kind === 1 ? 0.3 : strong ? 1 : 0.6);     // the note lights its wing's half of the chart's backlight
     if (kind === 1) { ring(uv[0], uv[1], 0.2, 0.34, colData[v * 4], colData[v * 4 + 1], colData[v * 4 + 2]); return; }
     const c = CH_COL[chord % 4];
     kick = Math.max(kick, strong ? 1 : 0.45);
@@ -633,7 +655,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     if (tSlow === null && sep > 0.5) { tSlow = simT; say(t("saySlow")); }
     if (tBurst === null && sep > 15) {
       tBurst = simT;
-      const uv = toUv(cen[0], cen[1], cen[2]); ring(uv[0], uv[1], 1.0, 0.85, 0.45, 0.6, 1.0); flash = 1; kick = 1;
+      const uv = toUv(cen[0], cen[1], cen[2]); ring(uv[0], uv[1], 1.0, 0.85, 0.45, 0.6, 1.0); flash = 1; kick = 1; pulse(0, 1.5);
       say(t("sayBurst"));
       music.burst();
       buzz(28);
@@ -1073,9 +1095,13 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     }
     for (let i = 2; i < RN * 4; i += 4) if (ringA[i] >= 0) ringA[i] = ringA[i] > 3 ? -1 : ringA[i] + dt;
     kick *= Math.exp(-dt / 0.18); flash *= Math.exp(-dt / 0.16); starKick *= Math.exp(-dt / 0.4);
-    lightR *= Math.exp(-dt / 0.28); lightL *= Math.exp(-dt / 0.28);
-    if (Math.abs(lightR - shownR) > 0.02) { shownR = lightR; $("oddsRain").style.setProperty("--k", lightR.toFixed(2)); }
-    if (Math.abs(lightL - shownL) > 0.02) { shownL = lightL; $("oddsSun").style.setProperty("--k", lightL.toFixed(2)); }
+    lightUp *= Math.exp(-dt / 0.45); lightLo *= Math.exp(-dt / 0.45);
+    if (shoot[3] >= 0) { shoot[3] += dt; if (shoot[3] > 1.1) shoot[3] = -1; }
+    else if (!reduceMotion && (nextShoot -= dt) < 0) {      // every so often, a shooting star
+      const right = Math.random() < 0.5;
+      nextShoot = 16 + Math.random() * 22; shoot[0] = (right ? 0.08 : 0.55) + Math.random() * 0.37; shoot[1] = 0.70 + Math.random() * 0.26;
+      shoot[2] = right ? -0.2 - Math.random() * 0.5 : Math.PI + 0.2 + Math.random() * 0.5; shoot[3] = 0;
+    }
     for (let j = 0; j < 3; j++) tint[j] += (tintGoal[j] - tint[j]) * Math.min(1, dt * 2.5);
     if (cam.sway) { cam.t += dt; cam.az = -96 + 14 * Math.sin(cam.t * 0.16); cam.el = 9 + 4 * Math.sin(cam.t * 0.11); }
     updateCamera();
@@ -1145,7 +1171,8 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       gl.uniform2f(compose.u.uRes, W, Hh); gl.uniform2f(compose.u.uPar, cam.az * 0.004, cam.el * 0.004);
       gl.uniform1f(compose.u.uTime, time); gl.uniform1f(compose.u.uWideAmt, HQ ? 0.7 : 0); gl.uniform1f(compose.u.uStreakAmt, HQ ? 1.6 : 0); gl.uniform1f(compose.u.uStars2, HQ ? 1 : 0);
       gl.uniform4fv(compose.u["uRingA[0]"], ringA); gl.uniform4fv(compose.u["uRingB[0]"], ringB);
-      gl.uniform1f(compose.u.uFlash, flash); gl.uniform1f(compose.u.uStarKick, starKick); gl.uniform3f(compose.u.uTint, tint[0], tint[1], tint[2]);
+      gl.uniform1f(compose.u.uFlash, flash); gl.uniform1f(compose.u.uStarKick, starKick); gl.uniform3f(compose.u.uTint, tint[0], tint[1], tint[2]); gl.uniform4f(compose.u.uShoot, shoot[0], shoot[1], shoot[2], shoot[3]);
+      gl.uniform4f(compose.u.uBand, view.plume[0] / W, view.plume[1] / Hh, view.plume[2] / W, view.plume[3] / Hh); gl.uniform2f(compose.u.uBandLight, lightUp, lightLo);
     });
 
     if (++uiTick % 6 === 0) readouts();
