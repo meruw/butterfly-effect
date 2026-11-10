@@ -75,9 +75,30 @@ body { background: var(--bg); color: var(--ink); font: 400 14.5px/1.5 var(--body
   position: absolute; top: 14px; right: max(var(--gut), env(safe-area-inset-right, 0px)); min-height: 36px; padding: 0 11px;
   font: 500 12px/1 var(--mono); letter-spacing: 0.12em; background: var(--bg);
 }
+/* Entrada: la mariposa ya viva detrás, la pregunta delante y un botón para empezar. */
+.intro {
+  position: absolute; inset: 0; display: grid; align-content: end; justify-items: center; gap: 20px; text-align: center;
+  padding-block: 24px calc(var(--plume-h) * 0.45 + 28px);
+  padding-left: max(var(--gut), env(safe-area-inset-left, 0px)); padding-right: max(var(--gut), env(safe-area-inset-right, 0px));
+  background: linear-gradient(to bottom, transparent 38%, color-mix(in srgb, var(--bg) 88%, transparent) 78%);
+  transition: opacity 0.7s;
+}
+.intro.off { opacity: 0; pointer-events: none; }
+.intro-q { margin: 0; max-width: 19ch; font: 400 clamp(30px, 5vw, 58px)/1.06 var(--display); text-wrap: balance; text-shadow: 0 0 26px var(--bg), 0 0 10px var(--bg); }
+.intro .buttons { justify-content: center; }
+.intro button { background: var(--bg); }
+.intro button.primary { background: var(--ink); flex: 0 1 auto; }
+.skip {
+  position: absolute; top: 58px; right: max(var(--gut), env(safe-area-inset-right, 0px)); min-height: 36px; padding: 0 11px;
+  font: 500 12px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; background: var(--bg);
+}
+.head p, .plume-label, .odds, .hint { transition: opacity 0.8s; }
+.app.intro-landing .head p, .app.intro-landing .plume-label, .app.intro-landing .odds, .app.intro-landing .hint { opacity: 0; }
+.app.intro-on .panel { opacity: 0.2; pointer-events: none; }
 .nogl { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: var(--muted); }
 
 .panel {
+  transition: opacity 0.9s;
   background: var(--panel); border-left: 1px solid var(--line); overflow: auto;
   display: flex; flex-direction: column; gap: 20px; padding-block: 20px;
   padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px));
@@ -121,10 +142,10 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   .plume-label .wide { display: none; }
   .say { bottom: calc(var(--plume-h) + 60px); }
 }
-@media (prefers-reduced-motion: reduce) { .hint, .say { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .hint, .say, .intro, .panel, .head p, .plume-label, .odds { transition: none; } }
 </style>
 
-<div class="app">
+<div class="app intro-on intro-landing" id="app">
   <section class="stage" aria-label="Simulación">
     <canvas id="gl" aria-label="Atractor de Lorenz con todas las atmósferas simuladas y, debajo, la posición de cada una en el tiempo"></canvas>
     <header class="head">
@@ -133,6 +154,14 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     </header>
     <button class="lang" id="lang" type="button" aria-label="Switch to English">EN</button>
     <p class="say" id="say" aria-live="polite"></p>
+    <div class="intro" id="intro">
+      <p class="intro-q" data-t="hook">Basta un aleteo para que el mañana sea otro.</p>
+      <div class="buttons">
+        <button class="primary" id="begin" type="button" data-t="begin">Empezar con sonido</button>
+        <button id="beginMute" type="button" data-t="beginMute">Sin sonido</button>
+      </div>
+    </div>
+    <button class="skip" id="skip" type="button" data-t="skip" hidden>Saltar</button>
     <div class="label plume-label"><span data-t="plume">Pronóstico por conjuntos</span><span class="wide" data-t="plumeWide"> · una línea por atmósfera</span></div>
     <div class="label hint" id="hint" data-t="hint">Arrastra para girar</div>
     <div class="plume-slot" id="slot"></div>
@@ -143,7 +172,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     <div class="nogl" id="nogl" data-t="nogl" hidden>Este navegador no tiene WebGL 2, que hace falta para dibujar la simulación.</div>
   </section>
 
-  <aside class="panel" aria-label="Controles y lecturas">
+  <aside class="panel" id="panel" aria-label="Controles y lecturas" inert>
     <div class="group">
       <label class="label" for="eps" data-t="epsLabel">Diferencia inicial entre atmósferas</label>
       <div class="knob-value"><output id="epsNum" for="eps">0,000001</output><span id="epsName">una millonésima</span></div>
@@ -517,6 +546,49 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     music.reset();
   }
   // Lanzamiento desde el punto de siempre: comparable entre una prueba y otra.
+  // Entrada. La página abre con la mariposa ya separada y viva (se simula de golpe hasta ese
+  // punto, con una diferencia grande para llegar antes). Al empezar, todas las atmósferas
+  // colapsan en el punto de partida y la historia se cuenta sola, despacio, hasta que la luz
+  // se parte; ahí se entrega el control.
+  const intro = { phase: "landing", step: 0 };
+  function landing() {
+    const keep = exp10; exp10 = -1; seed(START[0], START[1], START[2]); exp10 = keep;
+    const all = new Float32Array(NCAP * T * 4);
+    for (let j = 0; j < NCAP * T; j++) { all[4 * j] = START[0]; all[4 * j + 1] = START[1]; all[4 * j + 2] = START[2]; all[4 * j + 3] = 1; }
+    gl.bindTexture(gl.TEXTURE_2D, posTex);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, NCAP, T, gl.RGBA, gl.FLOAT, all);
+    const rows = Math.round(11 / H);
+    for (let r = 0; r < rows; r++) { stepAll(H, nMax); simT += H; if (r >= rows - T) pushRow(); }
+    music.flush();
+    measure();
+    born = abs - T; cohRow = abs; flap = false;
+    tSlow = simT - 9; tBurst = simT - 7; horizon = simT; open = 1; ref = 0.004 * NREF;   // ya separadas: estelas cortas y exposición baja
+    readouts(); drawChart();
+  }
+  function beginIntro(withSound) {
+    if (withSound && $("sound").getAttribute("aria-pressed") !== "true") $("sound").click();
+    if (paused) togglePause();
+    seed(START[0], START[1], START[2]);      // el historial se conserva: se ve cómo todas vuelven al mismo punto
+    cohRow = abs; flap = false;
+    const uv = toUv(START[0], START[1], START[2]); ring(uv[0], uv[1], 0.9, 0.6, 0.8, 0.85, 1.0); kick = 1;
+    music.flap();
+    intro.phase = "play"; intro.step = 0;
+    $("intro").classList.add("off"); $("app").classList.remove("intro-landing"); $("skip").hidden = false;
+    measure(); readouts();
+  }
+  function endIntro(announce) {
+    if (intro.phase === "done") return;
+    intro.phase = "done";
+    $("intro").classList.add("off"); $("app").classList.remove("intro-landing", "intro-on"); $("panel").inert = false; $("skip").hidden = true;
+    if (announce) say(t("intro3"), 4200);
+  }
+  function introTick() {
+    if (intro.phase !== "play") return;
+    if (intro.step === 0 && simT > 0.6) { intro.step = 1; say(t("intro1")(String(nMax).replace(/\B(?=(\d{3})+$)/g, t("thousands"))), 4300); }
+    else if (intro.step === 1 && simT > 7.2) { intro.step = 2; say(t("intro2"), 3800); }
+    else if (tBurst !== null && simT > tBurst + 4.2) endIntro(true);
+  }
+
   function launch(preroll) {
     seed(START[0], START[1], START[2]);
     const all = new Float32Array(NCAP * T * 4);
@@ -571,8 +643,12 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       insight1: (name, time) => `Con una diferencia de ${name}, las atmósferas siguieron juntas ${time} unidades de tiempo. Prueba otra diferencia y compara.`,
       insight2: (x) => `En tus pruebas, hacer la diferencia inicial 1.000 veces más pequeña solo dio ${x} unidades de tiempo más de pronóstico fiable.`,
       about: "Es el modelo de convección que Edward Lorenz publicó en 1963. Cada color es una atmósfera; superpuestas se ven blancas. Si un ala fuera lluvia y la otra sol, el marcador sería el pronóstico: cuántas de las atmósferas simuladas acaban en cada una.",
-      sayLaunch: "Todas juntas: una sola luz.", saySlow: "Empiezan a separarse.", sayBurst: "Aquí se acaba el pronóstico.",
+      sayLaunch: "De nuevo, una sola luz.", saySlow: "Y aun así, empiezan a alejarse.", sayBurst: "Aquí termina lo que se puede saber.",
       sayFlap: (name) => `Un aleteo de ${name}.`,
+      hook: "Basta un aleteo para que el mañana sea otro.", begin: "Empezar con sonido", beginMute: "Sin sonido", skip: "Saltar",
+      intro1: (n) => `${n} cielos casi idénticos. Juntos son una sola luz.`,
+      intro2: "Los separa apenas una millonésima.",
+      intro3: "Ahora el aleteo es tuyo: toca la mariposa.", thousands: ".",
       song: (key, hi, lo) => `Canción de esta diferencia: ${key}, con ${hi} y ${lo}. Mientras las atmósferas van juntas, cada vuelta toca la siguiente nota del tema; al separarse, la melodía improvisa. El zoom, la rotación y la separación cambian cómo suena.`,
       notes: ["Do", "Do♯", "Re", "Mi♭", "Mi", "Fa", "Fa♯", "Sol", "La♭", "La", "Si♭", "Si"],
       modes: { maj: "mayor", min: "menor" },
@@ -596,8 +672,12 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       insight1: (name, time) => `With a difference of ${name}, the atmospheres stayed together for ${time} time units. Try another difference and compare.`,
       insight2: (x) => `In your runs, making the initial difference 1,000 times smaller only bought ${x} more time units of reliable forecast.`,
       about: "This is the convection model Edward Lorenz published in 1963. Each color is one atmosphere; stacked together they look white. If one wing were rain and the other sun, the counter would be the forecast: how many of the simulated atmospheres end up on each.",
-      sayLaunch: "All together: a single light.", saySlow: "They start to drift apart.", sayBurst: "The forecast ends here.",
+      sayLaunch: "Once more, a single light.", saySlow: "And still, they begin to drift.", sayBurst: "Here ends what can be known.",
       sayFlap: (name) => `A wing flap of ${name}.`,
+      hook: "One wingbeat is enough to change tomorrow.", begin: "Start with sound", beginMute: "Without sound", skip: "Skip",
+      intro1: (n) => `${n} almost identical skies. Together, a single light.`,
+      intro2: "Barely a millionth sets them apart.",
+      intro3: "Now the wingbeat is yours: tap the butterfly.", thousands: ",",
       song: (key, hi, lo) => `This difference's song: ${key}, on ${hi} and ${lo}. While the atmospheres stay together, each loop plays the next note of the theme; once they split, the melody improvises. Zoom, rotation and separation change how it sounds.`,
       notes: ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"],
       modes: { maj: "major", min: "minor" },
@@ -612,7 +692,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   const t = (k) => L[lang][k];
   const fix = (v, d) => v.toFixed(d).replace(".", t("dec"));
   let sayTimer = 0;
-  function say(text) { const el = $("say"); el.textContent = text; el.classList.add("on"); clearTimeout(sayTimer); sayTimer = setTimeout(() => el.classList.remove("on"), 2600); }
+  function say(text, ms) { const el = $("say"); el.textContent = text; el.classList.add("on"); clearTimeout(sayTimer); sayTimer = setTimeout(() => el.classList.remove("on"), ms || 2600); }
   function knob() { $("epsNum").textContent = fix(Math.pow(10, exp10), -exp10); $("epsName").textContent = t("names")[exp10]; }
   function songLine() {
     const s = music.song(), tm = t("timbres");
@@ -794,6 +874,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       // Cada lanzamiento y cada aleteo empiezan el tema y la progresión desde el principio.
       reset() { chordK = 0; loops.fill(0); themeI = 0; botI = 0; if (on) setPad(ctx.currentTime); },
       song: () => song,
+      flush() { pending.length = 0; },
       // Una vez por fila de simulación: detecta lo alto de cada vuelta y los cambios de ala.
       // Corre siempre, con sonido o sin él, porque cada nota también se ve.
       row() {
@@ -881,6 +962,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   canvas.addEventListener("pointerup", (ev) => {
     if (ptr && !ptr.moved && performance.now() - ptr.t < 400) {
       const r = canvas.getBoundingClientRect();
+      endIntro(false);                   // tocar la mariposa durante la introducción la da por terminada
       aleteo((ev.clientX - r.left) / r.width, 1 - (ev.clientY - r.top) / r.height);
     }
     ptr = null;
@@ -891,6 +973,9 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   $("eps").addEventListener("input", (ev) => { exp10 = Number(ev.target.value); knob(); music.setSong(exp10); songLine(); });
   $("eps").addEventListener("change", () => launch(0));
   $("launch").addEventListener("click", () => { if (paused) togglePause(); launch(0); });
+  $("begin").addEventListener("click", () => beginIntro(true));
+  $("beginMute").addEventListener("click", () => beginIntro(false));
+  $("skip").addEventListener("click", () => endIntro(true));
   function togglePause() { paused = !paused; $("pause").textContent = paused ? t("resume") : t("pause"); }
   $("pause").addEventListener("click", togglePause);
   $("sound").addEventListener("click", () => { const on = music.toggle(); $("sound").setAttribute("aria-pressed", String(on)); $("sound").textContent = on ? t("mute") : t("sound"); });
@@ -919,12 +1004,13 @@ button[aria-pressed="true"] { border-color: var(--ink); }
 
     if (!paused) {
       // Rápido mientras van juntas, lento justo cuando se separan, normal después.
-      const want = tSlow === null ? 3.0 : (tBurst === null || simT < tBurst + 3 ? 0.6 : 1.2);
+      // En la introducción el primer tramo va más despacio, para que dé tiempo a leer y a oír el tema.
+      const want = tSlow === null ? (intro.phase === "play" ? 1.6 : 3.0) : (tBurst === null || simT < tBurst + 3 ? 0.6 : 1.2);
       speed += (want - speed) * Math.min(1, dt * 2.5);
       acc += speed * dt;
       let rows = 0;
       while (acc >= H && rows < 6) { stepAll(H, nMax); simT += H; acc -= H; rows++; pushRow(); }
-      if (rows) { measure(); events(); }
+      if (rows) { measure(); events(); introTick(); }
     }
     for (let i = 2; i < RN * 4; i += 4) if (ringA[i] >= 0) ringA[i] = ringA[i] > 3 ? -1 : ringA[i] + dt;
     kick *= Math.exp(-dt / 0.18); flash *= Math.exp(-dt / 0.16); starKick *= Math.exp(-dt / 0.4);
@@ -1006,7 +1092,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
 
   resize(true);
   updateCamera();
-  launch(170);                         // la primera vista ya trae un tramo de estela dibujado
+  landing();                           // la primera vista: la mariposa ya separada, detrás de la pregunta
   applyLang();
   if (reduceMotion) togglePause();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawChart);

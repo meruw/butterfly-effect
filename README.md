@@ -36,6 +36,8 @@ El número del pie es la separación máxima entre atmósferas, medida en la sim
 
 Cada lanzamiento anota cuánto tiempo siguieron juntas las atmósferas. Al probar varias diferencias aparece el resultado de fondo: hacer la medición inicial mil veces más precisa solo compra unas pocas unidades de tiempo más de pronóstico fiable.
 
+La página abre con la mariposa ya separada y viva, y una frase: "Basta un aleteo para que el mañana sea otro". Al empezar, todas las atmósferas colapsan en el punto de partida y la historia se cuenta sola, despacio, hasta que la luz se parte; ahí se entrega el control. Se puede saltar.
+
 Tocar la mariposa da un aleteo: todas las atmósferas colapsan en una sola luz, desde donde esté una de ellas, y vuelven a separarse.
 
 El sonido es opcional y sigue la misma idea que el del video: mientras las atmósferas van juntas suena el tema, y al separarse la melodía improvisa. Además, cada nota se ve: suelta una onda y da un pulso de brillo. Hay una diferencia con el video: cada valor de la perilla tiene su propia canción. Son doce, con tonalidad, progresión de acordes y timbres distintos (piano eléctrico, celesta, kalimba, cristal, arpa y campanas, por síntesis FM). Además, el zoom la hace más brillante o más lejana, la rotación mueve cada ala en el estéreo según dónde se ve y la separación entre atmósferas alarga el eco.
