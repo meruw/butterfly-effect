@@ -536,10 +536,10 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       about: "Es el modelo de convección que Edward Lorenz publicó en 1963. Cada color es una atmósfera; superpuestas se ven blancas. Si un ala fuera lluvia y la otra sol, el marcador sería el pronóstico: cuántas de las atmósferas simuladas acaban en cada una.",
       sayLaunch: "Todas juntas: una sola luz.", saySlow: "Empiezan a separarse.", sayBurst: "Aquí se acaba el pronóstico.",
       sayFlap: (name) => `Un aleteo de ${name}.`,
-      song: (key, hi, lo) => `Canción de esta diferencia: ${key}, con ${hi} y ${lo}. Cada giro toca una nota y cada cambio de ala cambia el acorde. El zoom, la rotación y la separación cambian cómo suena.`,
+      song: (key, hi, lo) => `Canción de esta diferencia: ${key}, con ${hi} y ${lo}. Cada vuelta de la mariposa toca una nota de la melodía y el acorde cambia cada cuatro vueltas. El zoom, la rotación y la separación cambian cómo suena.`,
       notes: ["Do", "Do♯", "Re", "Mi♭", "Mi", "Fa", "Fa♯", "Sol", "La♭", "La", "Si♭", "Si"],
-      modes: { lyd: "lidio", ion: "mayor", mix: "mixolidio", dor: "dórico", aeo: "menor", phr: "frigio", har: "menor armónico" },
-      timbres: { celesta: "celesta", harp: "arpa", glass: "cristal", marimba: "marimba", box: "caja de música", dark: "cuerdas graves" },
+      modes: { maj: "mayor", min: "menor" },
+      timbres: { epiano: "piano eléctrico", celesta: "celesta", glass: "cristal", kalimba: "kalimba", harp: "arpa", bell: "campanas" },
       names: { "-1": "una décima", "-2": "una centésima", "-3": "una milésima", "-4": "una diezmilésima", "-5": "una cienmilésima", "-6": "una millonésima", "-7": "una diezmillonésima", "-8": "una cienmillonésima", "-9": "una milmillonésima", "-10": "una diezmilmillonésima", "-11": "una cienmilmillonésima", "-12": "una billonésima" },
       axis: ["billonésima", "millonésima", "décima"], dec: ",", other: "EN", otherAria: "Switch to English",
     },
@@ -561,10 +561,10 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       about: "This is the convection model Edward Lorenz published in 1963. Each color is one atmosphere; stacked together they look white. If one wing were rain and the other sun, the counter would be the forecast: how many of the simulated atmospheres end up on each.",
       sayLaunch: "All together: a single light.", saySlow: "They start to drift apart.", sayBurst: "The forecast ends here.",
       sayFlap: (name) => `A wing flap of ${name}.`,
-      song: (key, hi, lo) => `This difference's song: ${key}, on ${hi} and ${lo}. Every loop plays a note and every wing change shifts the chord. Zoom, rotation and separation change how it sounds.`,
+      song: (key, hi, lo) => `This difference's song: ${key}, on ${hi} and ${lo}. Each loop of the butterfly plays one note of the melody, and the chord changes every four loops. Zoom, rotation and separation change how it sounds.`,
       notes: ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"],
-      modes: { lyd: "Lydian", ion: "major", mix: "Mixolydian", dor: "Dorian", aeo: "minor", phr: "Phrygian", har: "harmonic minor" },
-      timbres: { celesta: "celesta", harp: "harp", glass: "glass", marimba: "marimba", box: "music box", dark: "low strings" },
+      modes: { maj: "major", min: "minor" },
+      timbres: { epiano: "electric piano", celesta: "celesta", glass: "glass", kalimba: "kalimba", harp: "harp", bell: "bells" },
       names: { "-1": "one tenth", "-2": "one hundredth", "-3": "one thousandth", "-4": "one ten-thousandth", "-5": "one hundred-thousandth", "-6": "one millionth", "-7": "one ten-millionth", "-8": "one hundred-millionth", "-9": "one billionth", "-10": "one ten-billionth", "-11": "one hundred-billionth", "-12": "one trillionth" },
       axis: ["trillionth", "millionth", "tenth"], dec: ".", other: "ES", otherAria: "Cambiar a español",
     },
@@ -579,7 +579,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   function knob() { $("epsNum").textContent = fix(Math.pow(10, exp10), -exp10); $("epsName").textContent = t("names")[exp10]; }
   function songLine() {
     const s = music.song(), tm = t("timbres");
-    $("song").textContent = t("song")(t("notes")[s[0]] + " " + t("modes")[s[1]], tm[s[4]], tm[s[5]]);
+    $("song").textContent = t("song")(t("notes")[s[0]] + " " + t("modes")[s[1]], tm[s[3]], tm[s[4]]);
   }
   function readouts() {
     $("sep").textContent = fix(sep, 6);
@@ -634,52 +634,64 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   }
 
   // ---------- música: la mariposa toca ----------
-  // Ocho atmósferas suenan, y cada giro se oye en el momento en que ocurre: una nota aguda en
-  // lo alto de la vuelta y una grave en lo bajo. Cada ala tiene su instrumento y su lado, y
-  // cada cambio de ala cambia el acorde y trae una nota de bajo.
-  // Cada diferencia inicial tiene su canción (tonalidad, modo y timbres). El zoom la hace más
-  // íntima o más lejana, el giro de la cámara mueve las alas en el estéreo y la separación
+  // Una melodía, tocada por la atmósfera guía: una nota en lo alto de cada vuelta, en el
+  // instante en que ocurre. La escala es pentatónica (ninguna nota choca) y la melodía se
+  // mueve por pasos cortos: sube si la vuelta fue más grande y baja si fue más pequeña.
+  // El acorde cambia cada cuatro vueltas. El ala decide de qué lado suena, y en la izquierda
+  // la melodía se dobla una octava abajo. Tras separarse, otras cuatro atmósferas acompañan
+  // en voz baja.
+  // Cada diferencia inicial tiene su canción (tonalidad, progresión y timbres). El zoom la
+  // hace más íntima o más lejana, la rotación mueve cada ala en el estéreo y la separación
   // entre atmósferas alarga el eco.
   const music = (() => {
-    const V = 8, LEADS = 3;
-    const MODES = { lyd: [0, 2, 4, 6, 7, 9, 11], ion: [0, 2, 4, 5, 7, 9, 11], mix: [0, 2, 4, 5, 7, 9, 10], dor: [0, 2, 3, 5, 7, 9, 10], aeo: [0, 2, 3, 5, 7, 8, 10], phr: [0, 1, 3, 5, 7, 8, 10], har: [0, 2, 3, 5, 7, 8, 11] };
-    // raíz, modo, grados del ala derecha, grados del ala izquierda, timbre derecho, timbre izquierdo
+    const NV = 5;                         // la guía y cuatro acompañantes
+    const MAJ = [0, 2, 4, 5, 7, 9, 11], MIN = [0, 2, 3, 5, 7, 8, 10], PMAJ = [0, 2, 4, 7, 9], PMIN = [0, 3, 5, 7, 10];
+    // raíz, modo, progresión (grados, cuatro vueltas cada uno), timbre del ala derecha, timbre del ala izquierda
     const SONGS = {
-      "-12": [2, "lyd", [0, 1], [5, 2], "glass", "harp"],
-      "-11": [9, "ion", [0, 4], [5, 3], "celesta", "harp"],
-      "-10": [4, "mix", [0, 6], [4, 3], "marimba", "harp"],
-      "-9": [7, "ion", [0, 4], [5, 3], "box", "harp"],
-      "-8": [0, "lyd", [0, 1], [5, 2], "glass", "marimba"],
-      "-7": [5, "ion", [0, 4], [5, 3], "celesta", "marimba"],
-      "-6": [2, "ion", [0, 4], [5, 3], "celesta", "harp"],
-      "-5": [11, "dor", [2, 6], [0, 3], "box", "harp"],
-      "-4": [4, "dor", [2, 6], [0, 3], "marimba", "harp"],
-      "-3": [9, "aeo", [2, 6], [0, 3], "celesta", "dark"],
-      "-2": [6, "phr", [2, 6], [0, 1], "glass", "dark"],
-      "-1": [0, "har", [5, 4], [0, 3], "box", "dark"],
+      "-12": [2, "maj", [0, 3, 0, 4], "glass", "epiano"],
+      "-11": [9, "maj", [0, 5, 3, 4], "celesta", "epiano"],
+      "-10": [7, "maj", [0, 4, 5, 3], "kalimba", "harp"],
+      "-9": [0, "maj", [0, 5, 3, 4], "bell", "epiano"],
+      "-8": [5, "maj", [0, 3, 5, 4], "glass", "harp"],
+      "-7": [10, "maj", [0, 4, 5, 3], "epiano", "harp"],
+      "-6": [2, "maj", [0, 5, 3, 4], "celesta", "harp"],
+      "-5": [4, "maj", [3, 0, 4, 5], "bell", "harp"],
+      "-4": [11, "min", [0, 5, 2, 6], "epiano", "harp"],
+      "-3": [9, "min", [0, 5, 2, 6], "celesta", "epiano"],
+      "-2": [6, "min", [0, 3, 5, 6], "glass", "epiano"],
+      "-1": [2, "min", [0, 6, 5, 6], "kalimba", "epiano"],
     };
-    // tipo de onda, caída en s, octava, parciales extra [razón, amplitud, caída]
+    // Síntesis FM: razón de la moduladora, índice, caída del índice (s), caída de la nota (s)
     const TIMBRES = {
-      celesta: ["sine", 0.95, 0, [[4, 0.16, 0.12]]],
-      harp: ["triangle", 1.0, 0, []],
-      glass: ["sine", 1.5, 0, [[3, 0.2, 0.9]]],
-      marimba: ["triangle", 0.4, 0, [[4, 0.3, 0.06]]],
-      box: ["sine", 0.8, 0, [[2, 0.35, 0.5], [5.42, 0.1, 0.05]]],
-      dark: ["triangle", 1.3, -1, []],
-      bass: ["triangle", 1.3, 0, []],
-      spark: ["sine", 0.5, 0, []],
+      epiano: [1, 1.1, 0.35, 1.9], celesta: [4, 0.9, 0.18, 1.5], glass: [3.5, 0.5, 0.6, 2.3],
+      kalimba: [2.76, 1.3, 0.07, 1.0], harp: [2, 0.7, 0.25, 1.7], bell: [5.4, 0.45, 0.3, 1.7],
     };
-    const za = new Float64Array(V), zb = new Float64Array(V), xs = new Float64Array(V);
-    const visits = Array.from({ length: V }, () => [0, 0]);
+    const za = new Float64Array(NV), zb = new Float64Array(NV), xs = new Float64Array(NV);
+    const idx = new Int32Array(NV), rep = new Int32Array(NV), loops = new Int32Array(NV);
     const pending = [];
-    let ctx = null, on = false, master, dry, send, toneLP, wetG, fbG, pad = [], song = SONGS["-6"], lastNote = 0, leadChord = null;
+    let ctx = null, on = false, master, dry, send, toneLP, wetG, fbG, pad = [], song = SONGS["-6"], ladder = [], chordK = 0, lastSpark = 0;
     const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
-    function chord(wing, k) {
-      const sc = MODES[song[1]], d = (wing > 0 ? song[2] : song[3])[k % 2];
-      const pc = (i) => (song[0] + sc[(d + i) % 7]) % 12;
-      return { pcs: [pc(0), pc(2), pc(4), pc(1)], bass: 36 + pc(0) };
+    const scale = () => (song[1] === "maj" ? MAJ : MIN);
+    const chordPcs = (k) => [0, 2, 4].map((i) => (song[0] + scale()[(song[2][k % 4] + i) % 7]) % 12);
+    function build() {                    // la escalera de notas de la melodía, dos octavas
+      const pent = song[1] === "maj" ? PMAJ : PMIN; ladder = [];
+      for (let m = 55; m <= 79; m++) if (pent.includes((m - song[0] + 120) % 12)) ladder.push(m);
+      idx.fill(Math.floor(ladder.length / 2)); rep.fill(0);
     }
-    const pool = (ch, lo, hi) => { const o = []; for (let m = lo; m <= hi; m++) if (ch.pcs.includes(m % 12)) o.push(m); return o; };
+    build();
+    // Siguiente nota de una voz: hacia donde apunta el tamaño de la vuelta, pero a dos pasos como mucho.
+    function pick(v, zmax, strong) {
+      const n = ladder.length, target = Math.round(Math.min(1, Math.max(0, (zmax - 31) / 15)) * (n - 1));
+      let step = Math.max(-2, Math.min(2, target - idx[v]));
+      if (step === 0 && rep[v] >= 1) step = idx[v] > n / 2 ? -1 : 1;      // no más de dos notas iguales seguidas
+      rep[v] = step === 0 ? rep[v] + 1 : 0;
+      idx[v] = Math.max(0, Math.min(n - 1, idx[v] + step));
+      if (strong) {                       // al cambiar de acorde, la melodía cae en una nota del acorde
+        const pcs = chordPcs(chordK);
+        for (const d of [0, 1, -1]) { const j = idx[v] + d; if (j >= 0 && j < n && pcs.includes(ladder[j] % 12)) { idx[v] = j; break; } }
+      }
+      return ladder[idx[v]];
+    }
 
     function init() {
       const AC = window.AudioContext || window.webkitAudioContext;
@@ -692,51 +704,58 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       send = ctx.createGain();
       const dl = ctx.createDelay(1), lp = ctx.createBiquadFilter();
       fbG = ctx.createGain(); wetG = ctx.createGain();
-      dl.delayTime.value = 0.42; fbG.gain.value = 0.3; lp.type = "lowpass"; lp.frequency.value = 3600; wetG.gain.value = 0.4;
+      dl.delayTime.value = 0.38; fbG.gain.value = 0.25; lp.type = "lowpass"; lp.frequency.value = 3200; wetG.gain.value = 0.5;
       send.connect(dl); dl.connect(lp); lp.connect(fbG); fbG.connect(dl); lp.connect(wetG); wetG.connect(toneLP);
-      if (!mobile) {                      // reverberación solo donde sobra potencia
-        const len = Math.floor(ctx.sampleRate * 2.6), ir = ctx.createBuffer(2, len, ctx.sampleRate);
-        for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.5)); }
-        const cv = ctx.createConvolver(), cg = ctx.createGain(); cv.buffer = ir; cg.gain.value = 0.4; send.connect(cv); cv.connect(cg); cg.connect(wetG);
-      }
-      const plp = ctx.createBiquadFilter(); plp.type = "lowpass"; plp.frequency.value = 850; plp.connect(dry); plp.connect(send);
-      for (let i = 0; i < 3; i++) { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = "triangle"; g.gain.value = 0.04; o.connect(g); g.connect(plp); o.start(); pad.push(o); }
+      const secs = mobile ? 1.6 : 2.6, len = Math.floor(ctx.sampleRate * secs), ir = ctx.createBuffer(2, len, ctx.sampleRate);
+      for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * secs * 0.2)); }
+      const cv = ctx.createConvolver(), cg = ctx.createGain(); cv.buffer = ir; cg.gain.value = 0.55; send.connect(cv); cv.connect(cg); cg.connect(wetG);
+      const plp = ctx.createBiquadFilter(); plp.type = "lowpass"; plp.frequency.value = 700; plp.connect(dry); plp.connect(send);
+      for (let i = 0; i < 3; i++) { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = "triangle"; g.gain.value = 0.035; o.connect(g); g.connect(plp); o.start(); pad.push(o); }
       return true;
     }
-    function voice(t, midi, gain, pan, kind) {
-      const [type, dec, oct, parts] = TIMBRES[kind], f = hz(midi + 12 * oct);
-      const g = ctx.createGain();
-      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(gain, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t + dec);
-      const o = ctx.createOscillator(); o.type = type; o.frequency.value = f; o.connect(g); o.start(t); o.stop(t + dec + 0.05);
-      for (const [ratio, amp, d2] of parts) {
-        if (f * ratio > 12000) continue;
-        const o2 = ctx.createOscillator(), g2 = ctx.createGain(); o2.frequency.value = f * ratio;
-        g2.gain.setValueAtTime(gain * amp, t); g2.gain.exponentialRampToValueAtTime(0.0001, t + d2);
-        o2.connect(g2); g2.connect(g); o2.start(t); o2.stop(t + d2 + 0.05);
-      }
-      let out = g;
-      if (ctx.createStereoPanner) { const p = ctx.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, pan)); g.connect(p); out = p; }
-      out.connect(dry); if (kind !== "bass") out.connect(send);
+    function out(node, pan, toSend) {
+      let o = node;
+      if (ctx.createStereoPanner) { const p = ctx.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, pan)); node.connect(p); o = p; }
+      o.connect(dry); if (toSend) o.connect(send);
     }
-    function setPad(ch, t) { const tones = pool(ch, 50, 66); pad.forEach((o, i) => o.frequency.setTargetAtTime(hz(tones[i % tones.length]), t, 0.05)); }
+    // Nota con síntesis FM: una moduladora cuyo índice se apaga da el golpe y deja un cuerpo suave.
+    function note(t, midi, gain, pan, kind) {
+      const [ratio, index, idec, dec] = TIMBRES[kind], f = hz(midi);
+      const car = ctx.createOscillator(), mod = ctx.createOscillator(), mg = ctx.createGain(), g = ctx.createGain();
+      car.frequency.value = f; mod.frequency.value = f * ratio;
+      mg.gain.setValueAtTime(f * index, t); mg.gain.exponentialRampToValueAtTime(f * index * 0.04 + 0.01, t + idec);
+      mod.connect(mg); mg.connect(car.frequency);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(gain, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t + dec);
+      car.connect(g); out(g, pan, true);
+      car.start(t); mod.start(t); car.stop(t + dec + 0.05); mod.stop(t + dec + 0.05);
+    }
+    function bass(t, pc) {
+      const o = ctx.createOscillator(), g = ctx.createGain(); o.type = "triangle"; o.frequency.value = hz(36 + pc + (pc < 4 ? 12 : 0));
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.13, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.8);
+      o.connect(g); out(g, 0, false); o.start(t); o.stop(t + 1.9);
+    }
+    function setPad(t) {
+      const pcs = chordPcs(chordK), tones = [];
+      for (let m = 48; m <= 67 && tones.length < 3; m++) if (pcs.includes(m % 12)) tones.push(m);
+      pad.forEach((o, i) => o.frequency.setTargetAtTime(hz(tones[i]), t, 0.12));
+    }
 
     return {
       toggle() {
         if (!ctx && !init()) return false;
         on = !on; ctx.resume();
-        master.gain.setTargetAtTime(on ? 0.7 : 0, ctx.currentTime, 0.08);
-        if (on) { leadChord = chord(xs[0] >= 0 ? 1 : -1, visits[0][xs[0] >= 0 ? 0 : 1]); setPad(leadChord, ctx.currentTime); }
+        master.gain.setTargetAtTime(on ? 0.65 : 0, ctx.currentTime, 0.08);
+        if (on) setPad(ctx.currentTime);
         return on;
       },
-      setSong(e) { song = SONGS[e] || SONGS["-6"]; if (on && leadChord) { leadChord = chord(xs[0] >= 0 ? 1 : -1, visits[0][xs[0] >= 0 ? 0 : 1]); setPad(leadChord, ctx.currentTime); } return song; },
+      setSong(e) { song = SONGS[e] || SONGS["-6"]; build(); chordK = 0; loops.fill(0); if (on) setPad(ctx.currentTime); },
       song: () => song,
-      // Una vez por fila de simulación: detecta giros y cambios de ala.
+      // Una vez por fila de simulación: detecta lo alto de cada vuelta y los cambios de ala.
       row() {
-        for (let v = 0; v < V; v++) {
+        for (let v = 0; v < NV; v++) {
           const z = Z[v], x = X[v];
-          if (x * xs[v] < 0) { visits[v][x > 0 ? 0 : 1]++; if (on && v < LEADS) pending.push([v, 2, 0, x]); }
+          if (on && v === 0 && x * xs[v] < 0) pending.push([0, 2, 0, x]);
           if (on && zb[v] > za[v] && zb[v] >= z && zb[v] > 24) pending.push([v, 1, zb[v], x]);
-          if (on && v < LEADS && zb[v] < za[v] && zb[v] <= z && zb[v] < 24) pending.push([v, 0, zb[v], x]);
           za[v] = zb[v]; zb[v] = z; xs[v] = x;
         }
       },
@@ -744,44 +763,46 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       // panR y panL son la posición en pantalla de cada ala, de -1 a 1.
       frame(panR, panL, dist, sep) {
         if (!on) { pending.length = 0; return; }
-        const now = ctx.currentTime + 0.012, seen = new Map();
+        const now = ctx.currentTime + 0.012;
         for (const [v, what, zv, x] of pending) {
-          const wing = x >= 0 ? 1 : -1, ch = chord(wing, visits[v][wing > 0 ? 0 : 1]), pan = wing > 0 ? panR : panL;
-          if (what === 2) {                 // cambio de ala: destello, y si es la voz guía, acorde y bajo
-            if (v === 0) { leadChord = ch; setPad(ch, now); voice(now, ch.bass + 12, 0.17, 0, "bass"); }
-            const ps = pool(ch, 86, 98); voice(now, ps[Math.floor(Math.random() * ps.length)], 0.04, pan, "spark");
+          const right = x >= 0, pan = (right ? panR : panL) * 0.7;
+          if (what === 2) {                 // destello al cambiar de ala, sin amontonarse
+            if (now - lastSpark > 1.2) { lastSpark = now; note(now, ladder[ladder.length - 1 - Math.floor(Math.random() * 3)] + 24, 0.02, pan, "glass"); }
             continue;
           }
-          let ps, f;
-          if (what === 1) { ps = wing > 0 ? pool(ch, 69, 93) : pool(ch, 57, 81); f = (zv - 30) / 17; }
-          else { ps = wing > 0 ? pool(ch, 62, 76) : pool(ch, 50, 64); f = (zv - 4) / 16; }
-          const midi = ps[Math.floor(Math.min(0.999, Math.max(0, f)) * ps.length)], kind = wing > 0 ? song[4] : song[5], key = kind + midi;
-          const s = seen.get(key); if (s) s.n++; else seen.set(key, { midi, kind, pan, n: 1, g: what === 1 ? 0.085 : 0.06 });
+          if (v === 0) {
+            const strong = loops[0] % 4 === 0;
+            if (strong) { if (loops[0] > 0) chordK++; setPad(now); bass(now, chordPcs(chordK)[0]); }
+            loops[0]++;
+            // La melodía no salta de octava al cambiar de ala: el ala decide el lado, y en la
+            // izquierda se dobla una octava abajo con el segundo timbre, que la oscurece.
+            const m = pick(0, zv, strong);
+            note(now, m + 12, strong ? 0.13 : 0.1, pan, song[3]);
+            if (!right) note(now, m, 0.045, pan, song[4]);
+          } else if (sep > 0.5) {            // acompañantes: solo ya separadas, bajito, por debajo y una vuelta sí y otra no
+            if (loops[v]++ % 2 === 0) note(now, pick(v, zv, false), 0.028, (right ? panR : panL) * 0.95, song[4]);
+          }
         }
         pending.length = 0;
-        for (const s of seen.values()) {     // las que coinciden suenan como una sola nota más fuerte
-          if (now - lastNote < 0.03 && s.n === 1) continue;
-          lastNote = now; voice(now, s.midi, s.g * Math.min(2.2, Math.sqrt(s.n)), s.pan, s.kind);
-        }
         // Cerca: brillante y seco. Lejos: apagado y con más eco. Más separación: eco más largo.
         const far = Math.min(1, Math.max(0, (dist - 60) / 140));
-        toneLP.frequency.setTargetAtTime(11000 * Math.pow(0.14, far), now, 0.1);
-        wetG.gain.setTargetAtTime(0.25 + 0.6 * far, now, 0.1);
-        fbG.gain.setTargetAtTime(0.2 + 0.3 * Math.min(1, Math.max(0, (Math.log10(Math.max(sep, 1e-9)) + 2) / 3.5)), now, 0.2);
+        toneLP.frequency.setTargetAtTime(9000 * Math.pow(0.16, far), now, 0.1);
+        wetG.gain.setTargetAtTime(0.4 + 0.5 * far, now, 0.1);
+        fbG.gain.setTargetAtTime(0.15 + 0.3 * Math.min(1, Math.max(0, (Math.log10(Math.max(sep, 1e-9)) + 2) / 3.5)), now, 0.2);
       },
-      burst() {
-        if (!on || !leadChord) return;
-        const t = ctx.currentTime + 0.02, ps = pool(leadChord, 50, 90);
-        ps.forEach((m, i) => { if (i % 2 === 0) voice(t + 0.014 * i, m, 0.085, -0.6 + 1.2 * i / ps.length, m < 70 ? song[5] : song[4]); });
+      burst() {                             // el acorde entero, arpegiado hacia arriba
+        if (!on) return;
+        const t = ctx.currentTime + 0.02, pcs = chordPcs(chordK); let i = 0;
+        for (let m = 50; m <= 86; m++) if (pcs.includes(m % 12)) { note(t + 0.03 * i, m, 0.05, -0.6 + 0.12 * i, m < 68 ? song[4] : song[3]); i++; }
         const o = ctx.createOscillator(), g = ctx.createGain();
-        o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.5);
-        g.gain.setValueAtTime(0.4, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+        o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(44, t + 0.5);
+        g.gain.setValueAtTime(0.3, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
         o.connect(g); g.connect(dry); o.start(t); o.stop(t + 1);
       },
-      flap() {
-        if (!on || !leadChord) return;
-        const t = ctx.currentTime + 0.02, ps = pool(leadChord, 62, 96);
-        ps.forEach((m, i) => voice(t + 0.035 * i, m, 0.05, -0.5 + i / ps.length, song[4]));
+      flap() {                              // una escala que sube
+        if (!on) return;
+        const t = ctx.currentTime + 0.02;
+        ladder.slice(-7).forEach((m, i) => note(t + 0.045 * i, m + 12, 0.035, -0.5 + i / 6, song[3]));
       },
       suspend(hide) { if (ctx && on) (hide ? ctx.suspend() : ctx.resume()); },
     };
