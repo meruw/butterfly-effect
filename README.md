@@ -1,14 +1,14 @@
-# El efecto mariposa
+# Butterfly Effect
 
-Basta un aleteo para que el mañana sea otro. 3.000 atmósferas simuladas a la vez con el modelo de Lorenz (1963), en un video renderizado por completo en CPU y en una versión web interactiva.
+One wingbeat is enough to change tomorrow. 3,000 atmospheres simulated at once with the Lorenz model (1963), as a video rendered entirely on the CPU and as an interactive web page.
 
-**Versión interactiva:** https://chaos.meruw.dev
+**Interactive version:** https://chaos.meruw.dev
 
-![La luz blanca se abre en un espectro cuando las atmósferas divergen](media/divergencia.png)
+![White light opens into a spectrum as the atmospheres diverge](media/divergence.png)
 
-## Qué muestra
+## What it shows
 
-En 1963 Edward Lorenz redujo la convección de la atmósfera a tres ecuaciones:
+In 1963 Edward Lorenz reduced atmospheric convection to three equations:
 
 ```
 dx/dt = σ (y − x)
@@ -16,88 +16,90 @@ dy/dt = x (ρ − z) − y
 dz/dt = x y − β z          σ = 10, ρ = 28, β = 8/3
 ```
 
-El video simula 3.000 copias de ese sistema. Todas arrancan casi en el mismo punto: la diferencia entre la primera y la última es de una millonésima. Cada copia tiene un color.
+The video simulates 3,000 copies of that system. They all start at almost the same point: the difference between the first and the last one is one millionth. Each copy has its own color.
 
-1. Al principio las 3.000 coinciden y la suma de todos los colores se ve como una sola luz blanca.
-2. La diferencia crece de forma exponencial. Cuando alcanza el tamaño de la pantalla, la luz se abre en un espectro: cada color es una atmósfera que tomó otro camino.
-3. Al final cada atmósfera está en un lugar distinto del atractor.
+1. At first all 3,000 coincide, and the sum of every color looks like a single white light.
+2. The difference grows exponentially. When it reaches the size of the screen, the light opens into a spectrum: each color is an atmosphere that took a different path.
+3. In the end every atmosphere is somewhere else on the attractor.
 
-### La gráfica de abajo es un pronóstico
+### The chart at the bottom is a forecast
 
-Los servicios meteorológicos no simulan una atmósfera sino muchas casi idénticas (pronóstico por conjuntos) y cuentan en cuántas llueve. La franja inferior del video es esa misma gráfica: una línea por atmósfera, con la posición `x` a lo largo del tiempo.
+Weather services do not simulate one atmosphere but many nearly identical ones (ensemble forecasting), and count in how many of them it rains. The lower band of the video is that same chart: one line per atmosphere, showing its `x` position over time.
 
-El marcador de la derecha usa una analogía: si un ala del atractor fuera lluvia y la otra sol, ¿cuántas de las 3.000 atmósferas están en cada una? Mientras coinciden marca 100 % y 0 %. Cuando divergen se queda cerca de 50 % y 50 %. Las alas del modelo real corresponden al sentido de giro de la convección, no a lluvia y sol.
+The counter on the right uses an analogy: if one wing of the attractor were rain and the other sun, how many of the 3,000 atmospheres are on each? While they coincide it reads 100 % and 0 %. Once they diverge it settles near 50 % and 50 %. In the actual model the wings correspond to the direction of the convective roll, not to rain and sun.
 
-El número del pie es la separación máxima entre atmósferas, medida en la simulación en cada fotograma.
+The number in the footer is the largest separation between atmospheres, measured in the simulation on every frame.
 
-![Estado final: cada atmósfera en un punto distinto del atractor](media/final.png)
+![Final state: every atmosphere at a different point of the attractor](media/final.png)
 
-## Versión interactiva
+## Interactive version
 
-[`docs/index.html`](docs/index.html) es una página sin dependencias que corre la misma simulación en el navegador con WebGL 2. Tiene una sola perilla: la diferencia inicial, desde una billonésima hasta una décima.
+[`docs/index.html`](docs/index.html) is a dependency-free page that runs the same simulation in the browser with WebGL 2. It has a single knob: the initial difference, from one trillionth to one tenth.
 
-Cada lanzamiento anota cuánto tiempo siguieron juntas las atmósferas. Al probar varias diferencias aparece el resultado de fondo: hacer la medición inicial mil veces más precisa solo compra unas pocas unidades de tiempo más de pronóstico fiable.
+The page opens with the butterfly already split and alive, and one line: "One wingbeat is enough to change tomorrow". On start, every atmosphere collapses onto the starting point and the story tells itself, slowly, until the light splits; that is where control is handed over. It can be skipped.
 
-La página abre con la mariposa ya separada y viva, y una frase: "Basta un aleteo para que el mañana sea otro". Al empezar, todas las atmósferas colapsan en el punto de partida y la historia se cuenta sola, despacio, hasta que la luz se parte; ahí se entrega el control. Se puede saltar.
+Every launch logs how long the atmospheres stayed together. Trying several differences reveals the underlying result: making the initial measurement a thousand times more precise only buys a few more time units of reliable forecast.
 
-Tocar la mariposa da un aleteo: todas las atmósferas colapsan en una sola luz, desde donde esté una de ellas, y vuelven a separarse.
+Tapping the butterfly flaps its wings: every atmosphere collapses into a single light, wherever one of them happens to be, and they set off again.
 
-El sonido es opcional y sigue la misma idea que el del video: mientras las atmósferas van juntas suena el tema, y al separarse la melodía improvisa. Además, cada nota se ve: suelta una onda y da un pulso de brillo. Hay una diferencia con el video: cada valor de la perilla tiene su propia canción. Son doce, con tonalidad, progresión de acordes y timbres distintos (piano eléctrico, celesta, kalimba, cristal, arpa y campanas, por síntesis FM). Además, el zoom la hace más brillante o más lejana, la rotación mueve cada ala en el estéreo según dónde se ve y la separación entre atmósferas alarga el eco.
+Sound is optional and follows the same idea as the video: while the atmospheres stay together the theme plays, and once they split the melody improvises. Every note is also visible: it releases a ripple and a pulse of brightness. One thing differs from the video: every position of the knob has its own song. There are twelve, each with its own key, chord progression and timbres (electric piano, celesta, kalimba, glass, harp and bells, through FM synthesis). On top of that, zoom makes it brighter or more distant, rotation moves each wing across the stereo field according to where it is on screen, and the separation between atmospheres lengthens the echo.
 
-La página está en español y en inglés, con un botón para cambiar.
+The page is available in English and Spanish, with a button to switch.
 
-En teléfono la simulación y la perilla caben en una pantalla. Para que vaya fluida, la gráfica de pronóstico se dibuja en GPU, mientras las atmósferas coinciden solo se dibujan 64 con más peso (se ven idénticas), las estelas usan menos segmentos en su parte vieja y la cantidad de atmósferas baja sola si el equipo no sostiene el ritmo.
+On a phone the simulation and the knob fit on one screen. To keep it smooth, the forecast chart is drawn on the GPU, only 64 atmospheres with more weight are drawn while they coincide (they look identical), trails use fewer segments in their older part, and the number of atmospheres drops automatically if the device cannot keep up.
 
-El fuente está en `web/efecto-mariposa.html`. `web/build.py` genera `docs/`, que es lo que publica GitHub Pages: la página independiente con las etiquetas de vista previa para redes y el archivo `CNAME` del dominio. `web/make_og.py` compone la imagen de vista previa a partir de un fotograma del video.
+The source is `web/butterfly-effect.html`. `web/build.py` generates `docs/`, which is what GitHub Pages serves: the standalone page with social preview tags and the `CNAME` file for the domain. `web/make_og.py` composes the preview image from a frame of the video.
 
-## Cómo funciona el render
+## How the render works
 
-- **Integración:** Runge-Kutta de orden 2 con paso fijo de 0,0025, en doble precisión.
-- **Estelas sin memoria de pantalla:** cada atmósfera se representa con 400 partículas que siguen exactamente la misma trayectoria numérica, cada una con un retraso distinto. La estela existe en 3D, así que la cámara se puede mover sin que se emborrone.
-- **Render por densidad:** 1,2 millones de partículas se proyectan con cámara en perspectiva y se acumulan en un histograma de luz lineal. La profundidad de campo se obtiene desplazando cada partícula según su distancia al plano de foco.
-- **Revelado:** exposición automática, curva logarítmica, resplandor, destello anamórfico y viñeta.
-- **Arranque en frío y rebobinado:** una primera pasada renderiza el momento de la divergencia y lo coloca al inicio del video. Después la mariposa se rebobina con fotogramas de la propia película, hasta el punto de luz del que parte la historia.
-- **Rendimiento:** las partículas se reparten entre 8 procesos y se procesan en bloques de 4.096 que caben en caché. No usa GPU y corre con prioridad baja.
+- **Integration:** second-order Runge-Kutta with a fixed step of 0.0025, in double precision.
+- **Trails without screen memory:** each atmosphere is drawn as 400 particles that follow exactly the same numerical trajectory, each with a different lag. The trail exists in 3D, so the camera can move without smearing it.
+- **Density rendering:** 1.2 million particles are projected through a perspective camera and accumulated into a histogram of linear light. Depth of field comes from offsetting each particle according to its distance from the focal plane.
+- **Development:** automatic exposure, logarithmic curve, glow, anamorphic streak and vignette.
+- **Cold open and rewind:** a first pass renders the moment of divergence and places it at the start of the video. Then the butterfly rewinds, using frames from the film itself, down to the point of light the story starts from.
+- **Performance:** particles are split across 8 processes and handled in blocks of 4,096 that fit in cache. No GPU is used and it runs at low priority.
 
-## La música la toca la mariposa
+## The butterfly plays the music
 
-Hay un tema original de 16 notas, compuesto para este proyecto: cada frase abre con un salto de sexta y baja por pasos. `sound.py` hace que lo toque la atmósfera central.
+There is an original 16-note theme, written for this project: each phrase opens with a leap of a sixth and comes down stepwise. `sound.py` has the central atmosphere play it.
 
-- **El tema, mientras van juntas:** cada vuelta al atractor da la siguiente nota del tema, en el instante en que ocurre. El ritmo lo pone el giro; las notas son compuestas.
-- **Mano izquierda:** en lo bajo de cada vuelta suena una nota de acorde quebrado (fundamental, quinta, octava, quinta), con timbre de piano.
-- **Un acorde cada cuatro vueltas:** re, si menor, sol y la, con una nota de bajo en cada cambio.
-- **El ala decide el lado** en el estéreo, y en la izquierda la melodía se dobla una octava abajo.
-- **Al separarse, el tema se disuelve:** la melodía improvisa por pasos sobre la escala pentatónica (sube si la vuelta fue más grande, baja si fue más pequeña) y otras cuatro atmósferas acompañan en voz baja, cada una con sus propias vueltas.
-- **Cierre:** vuelve la primera frase del tema, cada vez más lenta.
+- **The theme, while they stay together:** every loop around the attractor gives the next note of the theme, at the instant it happens. The loops set the rhythm; the notes are composed.
+- **Left hand:** at the bottom of every loop a broken-chord note sounds (root, fifth, octave, fifth), with a piano timbre.
+- **One chord every four loops:** D, B minor, G and A, with a bass note on each change.
+- **The wing decides the side** in the stereo field, and on the left wing the melody is doubled an octave lower.
+- **Once they split, the theme dissolves:** the melody improvises stepwise on the pentatonic scale (up if the loop was larger, down if it was smaller) and four other atmospheres accompany softly, each following its own loops.
+- **Ending:** the first phrase of the theme returns, slower with each note.
 
-El tema, los acordes, el colchón, el glissando de arpa que sube hasta el momento de la divergencia y el cierre son composición, no datos. El tema no cita ninguna obra existente.
+The theme, the chords, the pad, the harp glissando that rises into the moment of divergence and the ending are composition, not data. The theme does not quote any existing work.
 
-## Uso
+## Usage
 
 ```bash
 pip install -r requirements.txt
 ```
 
 ```bash
-python butterfly.py --out out/efecto_mariposa.mp4
+python butterfly.py --out out/butterfly_effect.mp4
 ```
 
-Ese comando renderiza el video, sintetiza el audio y lo mezcla. Con `--lang es,en` salen los dos idiomas en una sola pasada (el segundo se guarda como `efecto_mariposa_en.mp4`). Para probar cambios rápido, fotogramas sueltos a media resolución:
+That command renders the video, synthesizes the audio and muxes it in. `--lang en,es` produces both languages in a single pass (the second one is saved as `butterfly_effect_es.mp4`).
+
+To try changes quickly, render single frames at half resolution:
 
 ```bash
 python butterfly.py --scale 0.5 --stills 0,3.6,9,19
 ```
 
-| Opción | Qué hace | Valor por defecto |
+| Option | What it does | Default |
 | --- | --- | --- |
-| `--lang` | Idioma del texto: `es`, `en` o `es,en` | `es` |
-| `--scale` | Resolución relativa a 1080×1080 | `1.0` |
-| `--fps` | Fotogramas por segundo | `60` |
-| `--workers` | Procesos de simulación | `8` |
-| `--trail` | Longitud de estela en el acto final, en pasos | `100` |
-| `--tail` | Segundos del acto final | `10` |
-| `--crf` | Calidad de H.264 (menor es mejor) | `16` |
-| `--no-audio` | No sintetiza ni mezcla la banda sonora | |
-| `--info` | Solo imprime el calendario del video | |
+| `--lang` | Caption language: `en`, `es` or `en,es` | `en` |
+| `--scale` | Resolution relative to 1080×1080 | `1.0` |
+| `--fps` | Frames per second | `60` |
+| `--workers` | Simulation processes | `8` |
+| `--trail` | Trail length in the final act, in steps | `100` |
+| `--tail` | Length of the final act, in seconds | `10` |
+| `--crf` | H.264 quality (lower is better) | `16` |
+| `--no-audio` | Skip synthesizing and muxing the soundtrack | |
+| `--info` | Only print the schedule of the video | |
 
-Las fuentes del texto son las de Windows (Sitka, Bahnschrift, Cambria, Consolas); en otros sistemas se usa la fuente por defecto de Pillow.
+Caption fonts are the ones that ship with Windows (Sitka, Bahnschrift, Cambria, Consolas); on other systems Pillow's default font is used.

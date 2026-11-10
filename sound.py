@@ -1,29 +1,28 @@
 """
-Banda sonora del efecto mariposa: la musica la toca la mariposa.
+Soundtrack for the butterfly effect: the butterfly plays the music.
 
-Hay un tema original de 16 notas, compuesto para este proyecto. Mientras las
-atmosferas van juntas, la atmosfera central lo toca: cada vuelta al atractor
-da la siguiente nota del tema, en el instante en que ocurre. El ritmo lo pone
-el giro; las notas son compuestas.
+There is an original 16-note theme, written for this project. While the
+atmospheres stay together, the central atmosphere plays it: every loop around
+the attractor gives the next note of the theme, at the instant it happens.
+The loops set the rhythm; the notes are composed.
 
-  - En lo bajo de cada vuelta suena una nota de acorde quebrado (fundamental,
-    quinta, octava, quinta), como la mano izquierda de un piano.
-  - El acorde cambia cada cuatro vueltas (re, si menor, sol, la), con una nota
-    de bajo.
-  - El ala decide de que lado suena; en la izquierda la melodia se dobla una
-    octava abajo.
-  - Cuando las atmosferas divergen, el tema se disuelve: la melodia pasa a
-    improvisar por pasos sobre la escala pentatonica (sube si la vuelta fue
-    mas grande, baja si fue mas pequena) y otras cuatro atmosferas acompanan
-    en voz baja, cada una con sus propias vueltas.
-  - Al final vuelve la primera frase del tema, lenta, para cerrar.
+  - At the bottom of every loop a broken-chord note sounds (root, fifth,
+    octave, fifth), like a pianist's left hand.
+  - The chord changes every four loops (D, B minor, G, A), with a bass note.
+  - The wing decides which side it sounds on; on the left wing the melody is
+    doubled an octave lower.
+  - When the atmospheres diverge the theme dissolves: the melody starts
+    improvising stepwise on the pentatonic scale (up if the loop was larger,
+    down if it was smaller) and four other atmospheres accompany softly, each
+    one following its own loops.
+  - At the end the first phrase of the theme returns, slowly, to close.
 
-El tema, los acordes, el colchon, el glissando que sube hasta el momento de la
-divergencia y el cierre son composicion, no datos. El tema no cita ninguna
-obra existente.
+The theme, the chords, the pad, the glissando that rises into the moment of
+divergence and the ending are composition, not data. The theme does not quote
+any existing work.
 
-Uso:
-  python sound.py --video out/efecto_mariposa.mp4
+Usage:
+  python sound.py --video out/butterfly_effect.mp4
 """
 import argparse
 import math
@@ -37,22 +36,22 @@ import butterfly as bf
 
 SR = 48000
 NVOICES = 20
-CYCLE = ("D", "Bm", "G", "A")        # un acorde cada cuatro vueltas de la atmosfera central
-LADDER = [m for m in range(55, 80) if m % 12 in (2, 4, 6, 9, 11)]   # re mayor pentatonica, dos octavas
-# Tema original, en grados de la escalera contados desde la tonica. Cuatro notas por acorde:
-# cada frase abre con un salto de sexta y baja por pasos.
+CYCLE = ("D", "Bm", "G", "A")        # one chord every four loops of the central atmosphere
+LADDER = [m for m in range(55, 80) if m % 12 in (2, 4, 6, 9, 11)]   # D major pentatonic, two octaves
+# Original theme, as ladder degrees counted from the tonic. Four notes per chord:
+# each phrase opens with a leap of a sixth and comes down stepwise.
 THEME = (0, 4, 3, 2,  2, 1, 2, 3,  0, 4, 3, 5,  3, 4, 2, 1)
 TONIC = LADDER.index(62)
-BROKEN = (0, 2, 3, 2)                # acorde quebrado: fundamental, quinta, octava, quinta
+BROKEN = (0, 2, 3, 2)                # broken chord: root, fifth, octave, fifth
 
-# Re mayor. Clases de altura de cada acorde: tres notas del acorde y una de color.
+# D major. Pitch classes of each chord: three chord tones and one color tone.
 CHORDS = {
     "D": {"bass": 38, "pcs": (2, 6, 9, 4)},
     "A": {"bass": 33, "pcs": (9, 1, 4, 11)},
     "Bm": {"bass": 35, "pcs": (11, 2, 6, 9)},
     "G": {"bass": 31, "pcs": (7, 11, 2, 9)},
 }
-# (razon de frecuencia, amplitud, caida en s) por parcial, y ataque en s
+# (frequency ratio, amplitude, decay in s) per partial, and attack in s
 TIMBRE = {
     "celesta": ([(1.0, 1.00, 0.75), (2.0, 0.28, 0.30), (4.0, 0.10, 0.12), (5.42, 0.05, 0.05)], 0.003),
     "harp": ([(1.0, 1.00, 0.95), (2.0, 0.45, 0.50), (3.0, 0.22, 0.30), (4.0, 0.10, 0.20)], 0.004),
@@ -72,8 +71,8 @@ def pool(chord, lo, hi):
 
 
 class Stepper:
-    """Melodia por pasos: va hacia donde apunta el tamano de la vuelta, pero a dos
-    grados de la escala como mucho, y sin repetir la misma nota mas de dos veces."""
+    """Stepwise melody: it heads where the size of the loop points, but by at most two
+    scale degrees, and never repeats the same note more than twice in a row."""
 
     def __init__(self):
         self.i = len(LADDER) // 2
@@ -87,7 +86,7 @@ class Stepper:
             step = -1 if self.i > n / 2 else 1
         self.rep = self.rep + 1 if step == 0 else 0
         self.i = max(0, min(n - 1, self.i + step))
-        if chord:                                     # en el cambio de acorde cae en una nota del acorde
+        if chord:                                     # on a chord change it lands on a chord tone
             pcs = CHORDS[chord]["pcs"][:3]
             for d in (0, 1, -1):
                 j = self.i + d
@@ -106,7 +105,7 @@ def chord_at(plan, t):
 
 
 def step_times(ci, fps):
-    """Instante de la pelicula en que se alcanza cada paso de simulacion."""
+    """Film time at which each simulation step is reached."""
     u, idx = np.unique(ci, return_index=True)
     return u, (idx + 1) / fps
 
@@ -172,16 +171,16 @@ def synth(sub, ci, ev, fps, seed=5):
         z = sub[:nsteps + 1, v, 2]
         return np.nonzero((z[1:-1] > z[:-2]) & (z[1:-1] >= z[2:]) & (z[1:-1] > 24.0))[0] + 1
 
-    # --- melodia: la atmosfera central, una nota por vuelta ---
+    # --- melody: the central atmosphere, one note per loop ---
     lead_v = voices[NVOICES // 2]
     xl, zl = sub[:nsteps + 1, lead_v, 0], sub[:nsteps + 1, lead_v, 2]
     st = Stepper()
     plan, count, k, loops, nth, burst_done = [], 0, 0, 0, 0, False
     for p in tops(lead_v):
         tn = when(int(p))
-        if tn > te - 3.6:                            # el cierre es el tema, no la improvisacion
+        if tn > te - 3.6:                            # the ending is the theme, not the improvisation
             break
-        if not burst_done and tn >= tb:              # al abrirse la luz la armonia vuelve a re
+        if not burst_done and tn >= tb:              # when the light opens up the harmony returns to D
             burst_done, k, loops = True, 0, 0
             plan.append((tb, CYCLE[0]))
         strong = loops % 4 == 0
@@ -190,21 +189,21 @@ def synth(sub, ci, ev, fps, seed=5):
                 k += 1
             plan.append((tn, CYCLE[k % 4]))
         loops += 1
-        if nth < len(THEME) and tn < ts:             # juntas: la mariposa toca el tema
+        if nth < len(THEME) and tn < ts:             # together: the butterfly plays the theme
             st.i, st.rep = TONIC + THEME[nth], 0
             midi = LADDER[st.i]
-        else:                                        # separandose: improvisa por pasos
+        else:                                        # drifting apart: it improvises stepwise
             midi = st.pick(zl[p], CYCLE[k % 4] if strong else None)
         nth += 1
         pan = 0.5 if xl[p] >= 0 else -0.5
         mx.note("lead", tn, midi + 12, 1.0 if strong else 0.8, pan, "piano", 0.0)
-        if xl[p] < 0:                                 # ala izquierda: se dobla una octava abajo
+        if xl[p] < 0:                                 # left wing: doubled an octave lower
             mx.note("lead", tn, midi, 0.4, pan, "piano", 0.0)
         count += 1
     plan = [(t0, c) for t0, c in plan if t0 < te - 3.6] + [(te - 3.4, "D")]
     plan.sort()
 
-    # --- mano izquierda: en lo bajo de cada vuelta, una nota del acorde quebrado ---
+    # --- left hand: at the bottom of every loop, one note of the broken chord ---
     bots = np.nonzero((zl[1:-1] < zl[:-2]) & (zl[1:-1] <= zl[2:]) & (zl[1:-1] < 24.0))[0] + 1
     nb, prev_ch = 0, None
     for p in bots:
@@ -219,14 +218,14 @@ def synth(sub, ci, ev, fps, seed=5):
         mx.note("cloud", tn, triad[BROKEN[nb % 4]], 0.5, 0.25 if xl[p] >= 0 else -0.25, "piano", 0.0)
         nb += 1
 
-    # --- cierre: vuelve la primera frase del tema, cada vez mas lenta ---
+    # --- ending: the first phrase of the theme returns, slower each note ---
     tr = te - 3.25
     for i, gap in enumerate((0.0, 0.42, 0.44, 0.48, 0.58)):
         tr += gap
         deg = THEME[i] if i < 4 else 0
         mx.note("lead", tr, LADDER[TONIC + deg] + 12, 0.9, 0.0, "piano", 0.0)
 
-    # --- destellos: cuando la atmosfera central cambia de ala, sin amontonarse ---
+    # --- sparkles: when the central atmosphere changes wings, never crowded ---
     sw = np.nonzero(np.sign(xl[1:]) != np.sign(xl[:-1]))[0] + 1
     last = -9.0
     for p in sw:
@@ -235,7 +234,7 @@ def synth(sub, ci, ev, fps, seed=5):
             last = tn
             mx.note("spark", tn, LADDER[-1 - int(rng.integers(0, 3))] + 24, 0.5, 0.6 if xl[p] >= 0 else -0.6, "spark")
 
-    # --- acompanantes: ya separadas, bajito, por debajo y una vuelta si y otra no ---
+    # --- accompaniment: once apart, softly, underneath, on every other loop ---
     for kv in (0, 5, 15, 19):
         v = voices[kv]
         x, z = sub[:nsteps + 1, v, 0], sub[:nsteps + 1, v, 2]
@@ -249,12 +248,12 @@ def synth(sub, ci, ev, fps, seed=5):
                 mx.note("cloud", tn, midi, 0.28, 0.85 if x[p] >= 0 else -0.85, "harp", detune[kv])
                 count += 1
 
-    # --- bajo: la fundamental, en cada cambio de acorde ---
+    # --- bass: the root, on every chord change ---
     for t0, ch in plan:
         if t0 > 0.3:
             mx.note("bass", t0, CHORDS[ch]["bass"], 1.0, 0.0, "bass")
 
-    # --- colchon: el acorde sostenido, con cruces suaves entre acordes ---
+    # --- pad: the sustained chord, with soft crossfades between chords ---
     pad = np.zeros(n)
     for i, (t0, ch) in enumerate(plan):
         t1 = plan[i + 1][0] if i + 1 < len(plan) else te + 1.0
@@ -264,7 +263,7 @@ def synth(sub, ci, ev, fps, seed=5):
             continue
         tones = pool(ch, 50, 69)[:5]
         if t0 >= te - 3.5:
-            tones = [50, 57, 62, 64, 66, 69]              # re mayor con novena para el cierre
+            tones = [50, 57, 62, 64, 66, 69]              # D major add 9 for the ending
         s = np.zeros(int(sel.sum()))
         for m_ in tones:
             for dt in (-0.0016, 0.0017):
@@ -273,22 +272,22 @@ def synth(sub, ci, ev, fps, seed=5):
                 for h, a in ((1, 1.0), (2, 0.30), (3, 0.10)):
                     s += a * np.sin(2 * math.pi * f * h * t[sel] + ph * h)
         pad[sel] += s * envp[sel] / len(tones)
-    swell = 0.55 + 0.45 * np.clip((t - ts) / max(0.1, tb - ts), 0, 1) ** 2      # crece hacia la divergencia
+    swell = 0.55 + 0.45 * np.clip((t - ts) / max(0.1, tb - ts), 0, 1) ** 2      # swells towards the divergence
     swell = np.where(t >= tb, 1.0 + 0.5 * np.exp(-(t - tb) / 1.2), swell)
     pad *= swell * np.clip(t / 1.2, 0, 1) * (0.9 + 0.1 * np.sin(2 * math.pi * 0.11 * t))
 
-    # --- glissando de arpa que sube hasta el momento en que la luz se parte ---
+    # --- harp glissando rising into the moment the light splits ---
     penta = [m for m in range(62, 99) if m % 12 in (2, 4, 6, 9, 11)]
     g0, ng = tb - 0.62, len(penta)
     for i, m_ in enumerate(penta):
         tn = g0 + 0.62 * (i / ng) ** 0.8
         mx.note("gliss", tn, m_, 0.25 + 0.75 * i / ng, -0.7 + 1.4 * i / ng, "harp")
-    for i, m_ in enumerate((50, 57, 62, 66, 69, 74, 78, 81, 86)):       # acorde abierto, arpegiado
+    for i, m_ in enumerate((50, 57, 62, 66, 69, 74, 78, 81, 86)):       # open chord, rolled
         mx.note("gliss", tb + 0.012 * i, m_, 1.0, -0.6 + 0.15 * i, "harp" if m_ < 70 else "celesta")
-    for i, m_ in enumerate((50, 57, 62, 64, 66, 69, 74, 78)):           # acorde de cierre
+    for i, m_ in enumerate((50, 57, 62, 64, 66, 69, 74, 78)):           # closing chord
         mx.note("gliss", te - 3.4 + 0.03 * i, m_, 0.7, -0.5 + 0.14 * i, "harp" if m_ < 70 else "celesta")
 
-    # --- aire: subida suave antes de la divergencia y brillo despues ---
+    # --- air: a soft riser before the divergence and a shimmer after it ---
     fx = np.zeros((n, 2))
     T = 2.4
     r = np.clip((t - (tb - T)) / T, 0, 1)
@@ -304,7 +303,7 @@ def synth(sub, ci, ev, fps, seed=5):
     boom = np.sin(2 * math.pi * np.cumsum((50.0 + 60.0 * np.exp(-d / 0.10)) * on) / SR) * np.exp(-d / 0.7) * on
     fx += (0.38 * boom)[:, None]
 
-    # --- niveles: el unisono suma en fase y sonaria mucho mas fuerte que el arpegio ---
+    # --- levels: the unison adds in phase and would sound much louder than the rest ---
     def moving(v, sec):
         w = int(sec * SR)
         c = np.cumsum(np.concatenate([[0.0], v]))
@@ -346,19 +345,19 @@ def synth(sub, ci, ev, fps, seed=5):
     mix = dry + 0.75 * wet
     mix *= (np.clip(t / 0.25, 0, 1) * np.clip((dur - t) / 0.6, 0, 1))[:, None]
 
-    # --- arranque en frio: se oye por adelantado el momento de la divergencia ---
+    # --- cold open: the moment of divergence is heard ahead of time ---
     n0 = int(round(bf.COLD_S * SR))
     n1 = int(round(bf.REWIND_S * SR))
     a = int(round((tb + bf.COLD_AT) * SR))
     tc = np.arange(n0) / SR
     cold = mix[a:a + n0] * np.clip(tc / 0.03, 0, 1)[:, None]
-    # Rebobinado: lo ultimo que sono, al reves y apagandose, con un soplo que se cierra
-    # justo en el punto de partida.
+    # Rewind: the last thing that sounded, reversed and fading, with a breath of air
+    # that closes exactly on the starting point.
     uu = np.arange(n1) / n1
     back = mix[a + n0 - n1:a + n0][::-1] * (1.0 - 0.8 * uu)[:, None]
-    soplo = lowpass_fft(rng.standard_normal(n1), 3000.0, order=2, highpass=400.0)
-    soplo /= float(np.abs(soplo).max())
-    back += (0.09 * soplo * np.sin(math.pi * uu) ** 2)[:, None]
+    breath = lowpass_fft(rng.standard_normal(n1), 3000.0, order=2, highpass=400.0)
+    breath /= float(np.abs(breath).max())
+    back += (0.09 * breath * np.sin(math.pi * uu) ** 2)[:, None]
     back *= np.clip((1.0 - uu) / 0.05, 0, 1)[:, None]
     full = np.concatenate([cold, back, mix], axis=0)
     full *= 0.89 / float(np.abs(full).max())
@@ -387,22 +386,22 @@ def mux(video, wav, out):
 
 
 def add_to_video(video, sub, ci, ev, fps, wav=None):
-    """Sintetiza la banda sonora y, si se da un video, la mezcla en el."""
+    """Synthesizes the soundtrack and, if a video is given, muxes it in."""
     wav = wav or (os.path.splitext(video)[0] + ".wav")
     mix, count = synth(sub, ci, ev, fps)
     os.makedirs(os.path.dirname(os.path.abspath(wav)) or ".", exist_ok=True)
     write_wav(wav, mix)
     rms = float(np.sqrt((mix ** 2).mean()))
-    print(f"audio: {wav}  {mix.shape[0] / SR:.2f}s  notas {count}  pico {np.abs(mix).max():.2f}  rms {rms:.3f}")
+    print(f"audio: {wav}  {mix.shape[0] / SR:.2f}s  notes {count}  peak {np.abs(mix).max():.2f}  rms {rms:.3f}")
     if video:
         mux(video, wav, video)
-        print("video con audio:", video, f"{os.path.getsize(video) / 1e6:.1f} MB")
+        print("video with audio:", video, f"{os.path.getsize(video) / 1e6:.1f} MB")
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--video", default="", help="MP4 al que se le agrega el audio (se reemplaza)")
-    ap.add_argument("--wav", default="out/efecto_mariposa.wav")
+    ap.add_argument("--video", default="", help="MP4 to add the audio to (replaced in place)")
+    ap.add_argument("--wav", default="out/butterfly_effect.wav")
     ap.add_argument("--fps", type=int, default=60)
     ap.add_argument("--tail", type=float, default=10.0)
     args = ap.parse_args()

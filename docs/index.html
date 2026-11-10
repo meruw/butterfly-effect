@@ -1,32 +1,32 @@
 <!doctype html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="Basta un aleteo para que el mañana sea otro. 2.000 atmósferas del modelo de Lorenz, en vivo: elige la diferencia inicial, toca la mariposa y escucha el tema que toca.">
+<meta name="description" content="One wingbeat is enough to change tomorrow. 2,000 atmospheres of the Lorenz model, live: choose the initial difference, tap the butterfly and listen to the theme it plays.">
 <meta name="theme-color" content="#05060d">
 <link rel="canonical" href="https://chaos.meruw.dev/">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2305060d'/%3E%3Cpath d='M16 20C9 6 3 9 4 16s8 9 12 4c4 5 11 3 12-4S23 6 16 20Z' fill='none' stroke='%23eceaf2' stroke-width='1.8'/%3E%3Ccircle cx='16' cy='20' r='2' fill='%23ffce70'/%3E%3C/svg%3E">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://chaos.meruw.dev/">
-<meta property="og:title" content="Efecto mariposa">
-<meta property="og:description" content="Basta un aleteo para que el mañana sea otro. 2.000 atmósferas del modelo de Lorenz, en vivo: elige la diferencia inicial, toca la mariposa y escucha el tema que toca.">
+<meta property="og:title" content="Butterfly Effect">
+<meta property="og:description" content="One wingbeat is enough to change tomorrow. 2,000 atmospheres of the Lorenz model, live: choose the initial difference, tap the butterfly and listen to the theme it plays.">
 <meta property="og:image" content="https://chaos.meruw.dev/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Efecto mariposa">
-<meta name="twitter:description" content="Basta un aleteo para que el mañana sea otro. 2.000 atmósferas del modelo de Lorenz, en vivo: elige la diferencia inicial, toca la mariposa y escucha el tema que toca.">
+<meta name="twitter:title" content="Butterfly Effect">
+<meta name="twitter:description" content="One wingbeat is enough to change tomorrow. 2,000 atmospheres of the Lorenz model, live: choose the initial difference, tap the butterfly and listen to the theme it plays.">
 <meta name="twitter:image" content="https://chaos.meruw.dev/og.png">
 <style>body{margin:0}[hidden]{display:none!important}</style>
-<title>Efecto mariposa</title>
+<title>Butterfly Effect</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-/* Composición: escenario a la izquierda (atractor y, dentro del mismo lienzo, la gráfica de
-   pronóstico); a la derecha el instrumento: una perilla, las lecturas y el experimento.
-   En teléfono el escenario y la perilla caben en la primera pantalla y lo demás queda debajo.
-   Un solo mundo visual, oscuro: lo que se muestra es luz. */
+/* Layout: the stage on the left (the attractor and, on the same canvas, the forecast
+      chart); on the right the instrument: one knob, the readouts and the experiment.
+      On a phone the stage and the knob fit on the first screen and the rest sits below.
+      A single visual world, dark: what is shown is light. */
 :root {
   color-scheme: dark;
   --bg: #05060d;
@@ -88,7 +88,7 @@ body { background: var(--bg); color: var(--ink); font: 400 14.5px/1.5 var(--body
   position: absolute; top: 14px; right: max(var(--gut), env(safe-area-inset-right, 0px)); min-height: 36px; padding: 0 11px;
   font: 500 12px/1 var(--mono); letter-spacing: 0.12em; background: var(--bg);
 }
-/* Entrada: la mariposa ya viva detrás, la pregunta delante y un botón para empezar. */
+/* Entry: the butterfly already alive behind, the opening line in front and a button to begin. */
 .intro {
   position: absolute; inset: 0; display: grid; align-content: end; justify-items: center; gap: 20px; text-align: center;
   padding-block: 24px calc(var(--plume-h) * 0.45 + 28px);
@@ -160,62 +160,62 @@ button[aria-pressed="true"] { border-color: var(--ink); }
 </head>
 <body>
 <div class="app intro-on intro-landing" id="app">
-  <section class="stage" aria-label="Simulación">
-    <canvas id="gl" aria-label="Atractor de Lorenz con todas las atmósferas simuladas y, debajo, la posición de cada una en el tiempo"></canvas>
+  <section class="stage" aria-label="Simulation">
+    <canvas id="gl" aria-label="Lorenz attractor with every simulated atmosphere and, below it, the position of each one over time"></canvas>
     <header class="head">
-      <h1 data-t="h1">Efecto mariposa</h1>
-      <p data-t="tagline">Todas estas atmósferas salen casi del mismo punto. Toca la mariposa para dar un aleteo.</p>
+      <h1 data-t="h1">Butterfly Effect</h1>
+      <p data-t="tagline">All these atmospheres start from almost the same point. Tap the butterfly to flap its wings.</p>
     </header>
-    <button class="lang" id="lang" type="button" aria-label="Switch to English">EN</button>
+    <button class="lang" id="lang" type="button" aria-label="Cambiar a español">ES</button>
     <p class="say" id="say" aria-live="polite"></p>
     <div class="intro" id="intro">
-      <p class="intro-q" data-t="hook">Basta un aleteo para que el mañana sea otro.</p>
+      <p class="intro-q" data-t="hook">One wingbeat is enough to change tomorrow.</p>
       <div class="buttons">
-        <button class="primary" id="begin" type="button" data-t="begin">Empezar con sonido</button>
-        <button id="beginMute" type="button" data-t="beginMute">Sin sonido</button>
+        <button class="primary" id="begin" type="button" data-t="begin">Start with sound</button>
+        <button id="beginMute" type="button" data-t="beginMute">Without sound</button>
       </div>
     </div>
-    <button class="skip" id="skip" type="button" data-t="skip" hidden>Saltar</button>
-    <div class="label plume-label"><span data-t="plume">Pronóstico por conjuntos</span><span class="wide" data-t="plumeWide"> · una línea por atmósfera</span></div>
-    <div class="label hint" id="hint" data-t="hint">Arrastra para girar</div>
+    <button class="skip" id="skip" type="button" data-t="skip" hidden>Skip</button>
+    <div class="label plume-label"><span data-t="plume">Ensemble forecast</span><span class="wide" data-t="plumeWide"> · one line per atmosphere</span></div>
+    <div class="label hint" id="hint" data-t="hint">Drag to rotate</div>
     <div class="plume-slot" id="slot"></div>
     <dl class="odds">
-      <div class="rain"><dt data-t="rain">Lluvia</dt><dd id="rain">100 %</dd></div>
-      <div class="sun"><dt data-t="sun">Sol</dt><dd id="sun">0 %</dd></div>
+      <div class="rain"><dt data-t="rain">Rain</dt><dd id="rain">100 %</dd></div>
+      <div class="sun"><dt data-t="sun">Sun</dt><dd id="sun">0 %</dd></div>
     </dl>
-    <div class="nogl" id="nogl" data-t="nogl" hidden>Este navegador no tiene WebGL 2, que hace falta para dibujar la simulación.</div>
+    <div class="nogl" id="nogl" data-t="nogl" hidden>This browser does not have WebGL 2, which is needed to draw the simulation.</div>
   </section>
 
-  <aside class="panel" id="panel" aria-label="Controles y lecturas" inert>
+  <aside class="panel" id="panel" aria-label="Controls and readouts" inert>
     <div class="group">
-      <label class="label" for="eps" data-t="epsLabel">Diferencia inicial entre atmósferas</label>
-      <div class="knob-value"><output id="epsNum" for="eps">0,000001</output><span id="epsName">una millonésima</span></div>
+      <label class="label" for="eps" data-t="epsLabel">Initial difference between atmospheres</label>
+      <div class="knob-value"><output id="epsNum" for="eps">0.000001</output><span id="epsName">one millionth</span></div>
       <input type="range" id="eps" min="-12" max="-1" step="1" value="-6">
-      <div class="scale"><span data-t="scaleMin">una billonésima</span><span data-t="scaleMax">una décima</span></div>
+      <div class="scale"><span data-t="scaleMin">one trillionth</span><span data-t="scaleMax">one tenth</span></div>
       <div class="buttons">
-        <button class="primary" id="launch" type="button" data-t="launch">Lanzar de nuevo</button>
-        <button id="sound" type="button" aria-pressed="false">Sonido</button>
-        <button id="pause" type="button">Pausar</button>
+        <button class="primary" id="launch" type="button" data-t="launch">Launch again</button>
+        <button id="sound" type="button" aria-pressed="false">Sound</button>
+        <button id="pause" type="button">Pause</button>
       </div>
       <p class="note" id="song"></p>
     </div>
 
     <div class="group">
       <dl class="readouts">
-        <div><dt data-t="sepNow">Separación ahora</dt><dd id="sep">0,000001</dd></div>
-        <div><dt data-t="together">Juntas durante</dt><dd id="horizon">0,0</dd><small id="horizonNote">tiempo del modelo, contando</small></div>
+        <div><dt data-t="sepNow">Separation now</dt><dd id="sep">0.000001</dd></div>
+        <div><dt data-t="together">Together for</dt><dd id="horizon">0.0</dd><small id="horizonNote">model time, counting</small></div>
       </dl>
     </div>
 
     <div class="group">
-      <div class="label" data-t="experiment">Tu experimento</div>
-      <p class="note" data-t="chartNote">Vertical: cuánto tiempo siguieron juntas. Horizontal: la diferencia inicial. Los puntos huecos son aleteos, que salen desde otro lugar.</p>
-      <canvas id="chart" aria-label="Tiempo que las atmósferas siguieron juntas según la diferencia inicial"></canvas>
-      <p class="insight" id="insight" aria-live="polite">Cuando las atmósferas se separen, aquí queda anotado cuánto aguantaron juntas.</p>
+      <div class="label" data-t="experiment">Your experiment</div>
+      <p class="note" data-t="chartNote">Vertical: how long they stayed together. Horizontal: the initial difference. Hollow dots are wing flaps, which start somewhere else.</p>
+      <canvas id="chart" aria-label="How long the atmospheres stayed together, by initial difference"></canvas>
+      <p class="insight" id="insight" aria-live="polite">When the atmospheres split, how long they held together is logged here.</p>
     </div>
 
     <div class="group">
-      <p class="note" data-t="about">Es el modelo de convección que Edward Lorenz publicó en 1963. Cada color es una atmósfera; superpuestas se ven blancas. Si un ala fuera lluvia y la otra sol, el marcador sería el pronóstico: cuántas de las atmósferas simuladas acaban en cada una.</p>
+      <p class="note" data-t="about">This is the convection model Edward Lorenz published in 1963. Each color is one atmosphere; stacked together they look white. If one wing were rain and the other sun, the counter would be the forecast: how many of the simulated atmospheres end up on each.</p>
     </div>
   </aside>
 </div>
@@ -227,16 +227,16 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const mobile = matchMedia("(max-width: 820px), (pointer: coarse)").matches;
 
-  // ---------- modelo ----------
+  // ---------- model ----------
   const SIGMA = 10, RHO = 28, BETA = 8 / 3;
-  const H = 0.0125;                   // tiempo del modelo por fila de estela
-  const T = 256;                      // filas de estela (3,2 unidades de tiempo)
-  const NREF = 2000;                  // la luz total siempre equivale a 2.000 atmósferas
-  const NCAP = mobile ? 1000 : 2000;  // atmósferas simuladas como máximo
+  const H = 0.0125;                   // model time per trail row
+  const T = 256;                      // trail rows (3.2 time units)
+  const NREF = 2000;                  // total light always equals 2,000 atmospheres
+  const NCAP = mobile ? 1000 : 2000;  // atmospheres simulated at most
   const START = [-2.901, -4.906, 12.988];
   const X = new Float64Array(NCAP), Y = new Float64Array(NCAP), Z = new Float64Array(NCAP);
-  // Desplazamiento de cada atmósfera en [-1, 1], en secuencia de baja discrepancia:
-  // cualquier prefijo cubre todos los colores, así se puede dibujar solo una parte.
+  // Offset of each atmosphere in [-1, 1], as a low-discrepancy sequence:
+  // any prefix covers every color, so drawing only part of them still works.
   const OFF = new Float32Array(NCAP);
   let leader = 0;
   for (let i = 0; i < NCAP; i++) { OFF[i] = 2 * ((i * 0.6180339887498949 + 0.5) % 1) - 1; if (i < 400 && Math.abs(OFF[i]) < Math.abs(OFF[leader])) leader = i; }
@@ -260,7 +260,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     }
   }
 
-  // Paleta del video, equilibrada para que la suma de todos los colores sea blanco.
+  // The video's palette, balanced so that the sum of all colors is white.
   const STOPS = [[0x3a, 0x5b, 0xff], [0x22, 0xd3, 0xff], [0xc8, 0xff, 0xf0], [0xff, 0xd7, 0x5e], [0xff, 0x8a, 0x3d], [0xff, 0x3d, 0x9a], [0x9b, 0x5c, 0xff]];
   function rawColor(t) {
     const p = Math.min(0.99999, Math.max(0, t)) * (STOPS.length - 1), i = Math.floor(p), f = p - i;
@@ -276,9 +276,9 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   const gl = canvas.getContext("webgl2", { antialias: false, alpha: false, depth: false, stencil: false, powerPreference: "high-performance" });
   if (!gl) { $("nogl").hidden = false; $("hint").hidden = true; return; }
   const hdr = !!(gl.getExtension("EXT_color_buffer_float") || gl.getExtension("EXT_color_buffer_half_float"));
-  const GAIN = hdr ? 1 : 0.008;       // sin lienzo de coma flotante se baja la intensidad para no saturar
-  const PASSES = mobile ? 1 : 2;      // segunda pasada desplazada medio píxel: líneas más llenas
-  const HQ = !mobile;                 // resplandor ancho, destello anamórfico y segunda capa de estrellas
+  const GAIN = hdr ? 1 : 0.008;       // without a float render target, intensity is lowered to avoid saturation
+  const PASSES = mobile ? 1 : 2;      // second pass offset by a fraction of a pixel: fuller lines
+  const HQ = !mobile;                 // wide glow, anamorphic streak and a second layer of stars
 
   function program(vs, fs) {
     const p = gl.createProgram();
@@ -301,10 +301,10 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     void main(){ vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2)); vUv = p; gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0); }`;
   const SOLID_FS = `in vec3 vCol; out vec4 o; void main(){ o = vec4(vCol, 1.0); }`;
 
-  // Estelas. Cada segmento se arma en el shader desde la textura de posiciones. En teléfono
-  // hay dos niveles de detalle: la parte reciente fila a fila y el resto cada 2 filas (casi la
-  // mitad de vértices; en pantalla pequeña no se nota). El tramo grueso se ancla a filas
-  // absolutas para que no tiemble al avanzar. En escritorio toda la estela va fila a fila.
+  // Trails. Each segment is assembled in the shader from the position texture. On phones
+  // there are two levels of detail: the recent part row by row and the rest every 2 rows (almost
+  // half the vertices; unnoticeable on a small screen). The coarse part is anchored to absolute
+  // rows so it does not jitter as it advances. On desktop the whole trail goes row by row.
   const FINE = mobile ? 32 : T - 1;
   const SEG_A = FINE + 1, SEG_B = Math.ceil((T - 1 - FINE) / 2) + (mobile ? 1 : 0), SEG = SEG_A + SEG_B;
   const lines = program(`
@@ -328,7 +328,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       gl_Position = q;
     }`, SOLID_FS);
 
-  // Una mota de luz en la cabeza de cada atmósfera.
+  // A mote of light at the head of each atmosphere.
   const motes = program(`
     uniform sampler2D uPos, uCol;
     uniform mat4 uMVP; uniform int uT, uAbs; uniform vec2 uOff; uniform float uGain, uSize, uTime, uFloor;
@@ -345,7 +345,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     }`, `in vec3 vCol; out vec4 o;
     void main(){ vec2 d = gl_PointCoord - 0.5; float g = max(0.0, exp(-dot(d, d) * 36.0) - 0.000123); o = vec4(vCol * g, 1.0); }`);
 
-  // Gráfica de pronóstico: la coordenada x de cada atmósfera a lo largo de la estela.
+  // Forecast chart: the x coordinate of each atmosphere along its trail.
   const PL_SEG = T / 2;
   const plume = program(`
     uniform sampler2D uPos, uCol;
@@ -387,14 +387,14 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       o = vec4(c, 1.0);
     }`);
 
-  // Ondas: cada nota suelta una, desde la atmósfera que la tocó. Deforman un poco la imagen
-  // al pasar, igual que la onda grande del momento en que las atmósferas se separan.
+  // Ripples: every note releases one, from the atmosphere that played it. They bend the image
+  // slightly as they pass, like the big wave at the moment the atmospheres split.
   const RN = mobile ? 6 : 8;
   const compose = program(FULL_VS, `
     uniform sampler2D uLdr, uGlow, uWide, uStreak;
     uniform vec2 uRes, uPar; uniform float uTime, uWideAmt, uStreakAmt, uStars2, uFlash, uStarKick;
     uniform vec3 uTint;
-    uniform vec4 uRingA[${RN}], uRingB[${RN}];   // A: centro en uv, edad en s (negativa si está libre), fuerza. B: color y velocidad
+    uniform vec4 uRingA[${RN}], uRingB[${RN}];   // A: center in uv, age in s (negative if free), strength. B: color and speed
     in vec2 vUv; out vec4 o;
     float h1(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
     vec2 h2(vec2 p){ return fract(sin(vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)))) * 43758.5453); }
@@ -413,7 +413,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
         vec4 b = uRingB[i];
         vec2 d = (vUv - a.xy) * asp;
         float r = length(d), k = (r - a.z * b.w) / (0.010 + 0.035 * a.w);
-        float e = exp(-k * k) * exp(-a.z * (3.4 - 1.6 * a.w)) * a.w;   // las ondas pequeñas se apagan antes
+        float e = exp(-k * k) * exp(-a.z * (3.4 - 1.6 * a.w)) * a.w;   // small ripples die out sooner
         off += d / max(r, 1e-4) * e;
         add += b.rgb * e;
       }
@@ -456,7 +456,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   const colTex = tex(NCAP, 1, gl.RGBA32F, gl.RGBA, gl.FLOAT, gl.NEAREST, colData);
   gl.bindVertexArray(gl.createVertexArray());
 
-  // ---------- tamaño y encuadre ----------
+  // ---------- size and framing ----------
   let dprCap = mobile ? 1.5 : 2;
   let W = 0, Hh = 0, cssH = 1, scene, ldr, gA, gB, gC, gD, gS;
   const view = { ty: 0.35, offY: 0, floor: -1, plume: [0, 0, 2, 2] };
@@ -476,7 +476,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     gA = target(qw, qh, false); gB = target(qw, qh, false);
     gC = gD = gS = null;
     if (HQ) { gC = target(Math.max(2, W >> 3), Math.max(2, Hh >> 3), false); gD = target(gC.w, gC.h, false); gS = target(qw, qh, false); }
-    // La mariposa ocupa lo que queda entre el título y la franja de la gráfica.
+    // The butterfly takes whatever is left between the title and the chart band.
     const band = rc.bottom - rs.top + 34, top = mobile ? 92 : 80, usable = Math.max(120, rc.height - band - top);
     view.offY = (band - top) / rc.height;
     view.floor = -1 + 2 * band / rc.height;
@@ -484,7 +484,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     view.plume = [Math.round((rs.left - rc.left) * dpr), Math.round((rc.bottom - rs.bottom) * dpr), Math.max(2, Math.round(rs.width * dpr)), Math.max(2, Math.round(rs.height * dpr))];
   }
 
-  // ---------- cámara ----------
+  // ---------- camera ----------
   const cam = { az: -96, el: 8, dist: 108, sway: !reduceMotion, t: 0 };
   const M = new Float32Array(16);
   function updateCamera() {
@@ -506,14 +506,14 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     return [(M[0] * x + M[4] * y + M[8] * z + M[12]) / w * 0.5 + 0.5, ((M[1] * x + M[5] * y + M[9] * z + M[13]) / w + view.offY) * 0.5 + 0.5];
   }
 
-  // ---------- estado de la corrida ----------
-  const SUB = 48, subIdx = Array.from({ length: SUB }, (_, k) => k);   // un prefijo ya está bien repartido
+  // ---------- run state ----------
+  const SUB = 48, subIdx = Array.from({ length: SUB }, (_, k) => k);   // a prefix is already evenly spread
   let abs = 4096, born = abs, cohRow = abs - T;
   let simT = 0, acc = 0, sep = 0, rain = 1, cen = [0, 0, 20];
   let horizon = null, tSlow = null, tBurst = null, open = 0, speed = 0, exp10 = -6, paused = false, ref = 0.02 * NREF, flap = false;
   let time = 0;
-  // Pulsos: cada nota se ve. ringA y ringB guardan las ondas vivas; kick es el pulso de
-  // brillo que deja cada nota; tint es el color del resplandor de fondo, que sigue al acorde.
+  // Pulses: every note is visible. ringA and ringB hold the live ripples; kick is the pulse of
+  // brightness each note leaves; tint is the color of the background glow, which follows the chord.
   const ringA = new Float32Array(RN * 4), ringB = new Float32Array(RN * 4);
   for (let i = 0; i < RN; i++) ringA[i * 4 + 2] = -1;
   let ringI = 0, kick = 0, flash = 0, starKick = 0;
@@ -524,7 +524,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     ringA[i] = u; ringA[i + 1] = v; ringA[i + 2] = 0; ringA[i + 3] = strength;
     ringB[i] = r; ringB[i + 1] = g; ringB[i + 2] = b; ringB[i + 3] = speed;
   }
-  // tipo 0: nota de la melodía (fuerte si cambia el acorde); 1: nota de una acompañante; 2: cambio de ala
+  // kind 0: melody note (strong if the chord changes); 1: note from an accompanying atmosphere; 2: wing change
   function onBeat(kind, v, strong, chord) {
     if (kind === 2) { starKick = 1; return; }
     const uv = toUv(X[v], Y[v], Z[v]);
@@ -559,11 +559,10 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     simT = 0; acc = 0; horizon = null; tSlow = null; tBurst = null; open = 0; speed = 0;
     music.reset();
   }
-  // Lanzamiento desde el punto de siempre: comparable entre una prueba y otra.
-  // Entrada. La página abre con la mariposa ya separada y viva (se simula de golpe hasta ese
-  // punto, con una diferencia grande para llegar antes). Al empezar, todas las atmósferas
-  // colapsan en el punto de partida y la historia se cuenta sola, despacio, hasta que la luz
-  // se parte; ahí se entrega el control.
+  // Entry. The page opens with the butterfly already split and alive (it is simulated in one go
+  // up to that point, with a large difference to get there sooner). On start, every atmosphere
+  // collapses onto the starting point and the story tells itself, slowly, until the light
+  // splits; that is where control is handed over.
   const intro = { phase: "landing", step: 0 };
   function landing() {
     const keep = exp10; exp10 = -1; seed(START[0], START[1], START[2]); exp10 = keep;
@@ -576,13 +575,13 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     music.flush();
     measure();
     born = abs - T; cohRow = abs; flap = false;
-    tSlow = simT - 9; tBurst = simT - 7; horizon = simT; open = 1; ref = 0.004 * NREF;   // ya separadas: estelas cortas y exposición baja
+    tSlow = simT - 9; tBurst = simT - 7; horizon = simT; open = 1; ref = 0.004 * NREF;   // already apart: short trails and low exposure
     readouts(); drawChart();
   }
   function beginIntro(withSound) {
     if (withSound && $("sound").getAttribute("aria-pressed") !== "true") $("sound").click();
     if (paused) togglePause();
-    seed(START[0], START[1], START[2]);      // el historial se conserva: se ve cómo todas vuelven al mismo punto
+    seed(START[0], START[1], START[2]);      // history is kept: you see them all return to the same point
     cohRow = abs; flap = false;
     const uv = toUv(START[0], START[1], START[2]); ring(uv[0], uv[1], 0.9, 0.6, 0.8, 0.85, 1.0); kick = 1;
     music.flap();
@@ -603,6 +602,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     else if (tBurst !== null && simT > tBurst + 4.2) endIntro(true);
   }
 
+  // Launch from the usual point: comparable from one run to the next.
   function launch(preroll) {
     seed(START[0], START[1], START[2]);
     const all = new Float32Array(NCAP * T * 4);
@@ -614,8 +614,8 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     measure(); events(); readouts(); drawChart();
     say(t("sayLaunch"));
   }
-  // Aleteo: todas las atmósferas vuelven a juntarse donde está una de ellas y salen de nuevo.
-  function aleteo(u, v) {
+  // Wingbeat: every atmosphere comes back together where one of them is, and they set off again.
+  function wingbeat(u, v) {
     seed(X[leader], Y[leader], Z[leader]);
     cohRow = abs; flap = true; ring(u, v, 0.7, 0.55, 0.75, 0.8, 1.0);
     measure(); readouts();
@@ -623,9 +623,9 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     music.flap();
     buzz(12);
   }
-  // Vibración breve en teléfonos; solo después de que la persona haya tocado la página.
+  // Short vibration on phones; only after the person has touched the page.
   function buzz(ms) {
-    try { if (navigator.vibrate && navigator.userActivation && navigator.userActivation.hasBeenActive) navigator.vibrate(ms); } catch (e) { /* sin vibración */ }
+    try { if (navigator.vibrate && navigator.userActivation && navigator.userActivation.hasBeenActive) navigator.vibrate(ms); } catch (e) { /* no vibration */ }
   }
   function events() {
     if (tSlow === null && sep > 0.5) { tSlow = simT; say(t("saySlow")); }
@@ -639,7 +639,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     if (horizon === null && sep > 1) { horizon = simT; runs.push({ e: exp10, t: horizon, flap }); drawChart(); insight(); }
   }
 
-  // ---------- textos, en español y en inglés ----------
+  // ---------- copy, in Spanish and English ----------
   const L = {
     es: {
       h1: "Efecto mariposa",
@@ -701,8 +701,8 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     },
   };
   let lang = "";
-  try { lang = localStorage.getItem("mariposa-idioma") || ""; } catch (e) { lang = ""; }
-  if (lang !== "es" && lang !== "en") lang = (navigator.language || "es").toLowerCase().startsWith("es") ? "es" : "en";
+  try { lang = localStorage.getItem("butterfly-lang") || ""; } catch (e) { lang = ""; }
+  if (lang !== "es" && lang !== "en") lang = (navigator.language || "en").toLowerCase().startsWith("es") ? "es" : "en";
   const t = (k) => L[lang][k];
   const fix = (v, d) => v.toFixed(d).replace(".", t("dec"));
   let sayTimer = 0;
@@ -742,7 +742,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     knob(); songLine(); readouts(); insight(); drawChart();
   }
 
-  // ---------- gráfica del experimento ----------
+  // ---------- experiment chart ----------
   const root = getComputedStyle(document.documentElement), css = (name) => root.getPropertyValue(name).trim();
   const ccv = $("chart"), cctx = ccv.getContext("2d");
   function drawChart() {
@@ -764,24 +764,24 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     for (const r of runs) { cctx.beginPath(); cctx.arc(px(r.e), py(r.t), 3.4 * dpr, 0, 7); if (r.flap) cctx.stroke(); else cctx.fill(); }
   }
 
-  // ---------- música: la mariposa toca ----------
-  // Una melodía, tocada por la atmósfera guía: una nota en lo alto de cada vuelta, en el
-  // instante en que ocurre. La escala es pentatónica (ninguna nota choca) y la melodía se
-  // mueve por pasos cortos: sube si la vuelta fue más grande y baja si fue más pequeña.
-  // El acorde cambia cada cuatro vueltas. El ala decide de qué lado suena, y en la izquierda
-  // la melodía se dobla una octava abajo. Tras separarse, otras cuatro atmósferas acompañan
-  // en voz baja.
-  // Cada diferencia inicial tiene su canción (tonalidad, progresión y timbres). El zoom la
-  // hace más íntima o más lejana, la rotación mueve cada ala en el estéreo y la separación
-  // entre atmósferas alarga el eco.
+  // ---------- music: the butterfly plays ----------
+  // One melody, played by the lead atmosphere: one note at the top of every loop, at the
+  // instant it happens. The scale is pentatonic (no note clashes) and the melody moves in
+  // short steps: up if the loop was larger, down if it was smaller.
+  // The chord changes every four loops. The wing decides which side it sounds on, and on the
+  // left wing the melody is doubled an octave lower. Once they split, four other atmospheres
+  // accompany softly.
+  // Every initial difference has its own song (key, progression and timbres). Zoom makes it
+  // more intimate or more distant, rotation moves each wing across the stereo field and the
+  // separation between atmospheres lengthens the echo.
   const music = (() => {
-    const NV = 5;                         // la guía y cuatro acompañantes
-    // Tema original, en grados de la escalera contados desde la tónica; cuatro notas por acorde.
-    // Cada frase abre con un salto de sexta y baja por pasos. Suena mientras las atmósferas van juntas.
+    const NV = 5;                         // the lead and four accompanists
+    // Original theme, as ladder degrees counted from the tonic; four notes per chord.
+    // Each phrase opens with a leap of a sixth and comes down stepwise. It plays while the atmospheres stay together.
     const THEME = [0, 4, 3, 2, 2, 1, 2, 3, 0, 4, 3, 5, 3, 4, 2, 1];
-    const BROKEN = [0, 2, 3, 2];           // acorde quebrado: fundamental, quinta, octava, quinta
+    const BROKEN = [0, 2, 3, 2];           // broken chord: root, fifth, octave, fifth
     const MAJ = [0, 2, 4, 5, 7, 9, 11], MIN = [0, 2, 3, 5, 7, 8, 10], PMAJ = [0, 2, 4, 7, 9], PMIN = [0, 3, 5, 7, 10];
-    // raíz, modo, progresión (grados, cuatro vueltas cada uno), timbre del ala derecha, timbre del ala izquierda
+    // root, mode, progression (degrees, four loops each), right-wing timbre, left-wing timbre
     const SONGS = {
       "-12": [2, "maj", [0, 3, 0, 4], "glass", "epiano"],
       "-11": [9, "maj", [0, 5, 3, 4], "celesta", "epiano"],
@@ -796,7 +796,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       "-2": [6, "min", [0, 3, 5, 6], "glass", "epiano"],
       "-1": [2, "min", [0, 6, 5, 6], "kalimba", "epiano"],
     };
-    // Síntesis FM: razón de la moduladora, índice, caída del índice (s), caída de la nota (s)
+    // FM synthesis: modulator ratio, index, index decay (s), note decay (s)
     const TIMBRES = {
       epiano: [1, 1.1, 0.35, 1.9], celesta: [4, 0.9, 0.18, 1.5], glass: [3.5, 0.5, 0.6, 2.3],
       kalimba: [2.76, 1.3, 0.07, 1.0], harp: [2, 0.7, 0.25, 1.7], bell: [5.4, 0.45, 0.3, 1.7],
@@ -808,21 +808,21 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
     const scale = () => (song[1] === "maj" ? MAJ : MIN);
     const chordPcs = (k) => [0, 2, 4].map((i) => (song[0] + scale()[(song[2][k % 4] + i) % 7]) % 12);
-    function build() {                    // la escalera de notas de la melodía, dos octavas
+    function build() {                    // the ladder of melody notes, two octaves
       const pent = song[1] === "maj" ? PMAJ : PMIN; ladder = [];
       for (let m = 55; m <= 79; m++) if (pent.includes((m - song[0] + 120) % 12)) ladder.push(m);
       tonic = ladder.findIndex((m) => (m - song[0]) % 12 === 0);
       idx.fill(Math.floor(ladder.length / 2)); rep.fill(0);
     }
     build();
-    // Siguiente nota de una voz: hacia donde apunta el tamaño de la vuelta, pero a dos pasos como mucho.
+    // Next note of a voice: towards where the size of the loop points, but two steps at most.
     function pick(v, zmax, strong) {
       const n = ladder.length, target = Math.round(Math.min(1, Math.max(0, (zmax - 31) / 15)) * (n - 1));
       let step = Math.max(-2, Math.min(2, target - idx[v]));
-      if (step === 0 && rep[v] >= 1) step = idx[v] > n / 2 ? -1 : 1;      // no más de dos notas iguales seguidas
+      if (step === 0 && rep[v] >= 1) step = idx[v] > n / 2 ? -1 : 1;      // never more than two equal notes in a row
       rep[v] = step === 0 ? rep[v] + 1 : 0;
       idx[v] = Math.max(0, Math.min(n - 1, idx[v] + step));
-      if (strong) {                       // al cambiar de acorde, la melodía cae en una nota del acorde
+      if (strong) {                       // on a chord change the melody lands on a chord tone
         const pcs = chordPcs(chordK);
         for (const d of [0, 1, -1]) { const j = idx[v] + d; if (j >= 0 && j < n && pcs.includes(ladder[j] % 12)) { idx[v] = j; break; } }
       }
@@ -854,7 +854,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
       if (ctx.createStereoPanner) { const p = ctx.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, pan)); node.connect(p); o = p; }
       o.connect(dry); if (toSend) o.connect(send);
     }
-    // Nota con síntesis FM: una moduladora cuyo índice se apaga da el golpe y deja un cuerpo suave.
+    // FM note: a modulator whose index dies away gives the strike and leaves a soft body.
     function note(t, midi, gain, pan, kind) {
       const [ratio, index, idec, dec] = TIMBRES[kind], f = hz(midi);
       const car = ctx.createOscillator(), mod = ctx.createOscillator(), mg = ctx.createGain(), g = ctx.createGain();
@@ -885,12 +885,12 @@ button[aria-pressed="true"] { border-color: var(--ink); }
         return on;
       },
       setSong(e) { song = SONGS[e] || SONGS["-6"]; build(); this.reset(); },
-      // Cada lanzamiento y cada aleteo empiezan el tema y la progresión desde el principio.
+      // Every launch and every wingbeat start the theme and the progression from the top.
       reset() { chordK = 0; loops.fill(0); themeI = 0; botI = 0; if (on) setPad(ctx.currentTime); },
       song: () => song,
       flush() { pending.length = 0; },
-      // Una vez por fila de simulación: detecta lo alto de cada vuelta y los cambios de ala.
-      // Corre siempre, con sonido o sin él, porque cada nota también se ve.
+      // Once per simulation row: detects the top of every loop and the wing changes.
+      // It always runs, with or without sound, because every note is also visible.
       row() {
         for (let v = 0; v < NV; v++) {
           const z = Z[v], x = X[v];
@@ -900,14 +900,14 @@ button[aria-pressed="true"] { border-color: var(--ink); }
           za[v] = zb[v]; zb[v] = z; xs[v] = x;
         }
       },
-      // Una vez por fotograma: decide las notas, las toca si hay sonido y avisa de cada una
-      // con beat(tipo, atmósfera, fuerte, acorde). panR y panL son la posición en pantalla
-      // de cada ala, de -1 a 1.
+      // Once per frame: decides the notes, plays them if sound is on and reports each one
+      // through beat(kind, atmosphere, strong, chord). panR and panL are the on-screen position
+      // of each wing, from -1 to 1.
       frame(panR, panL, dist, sep, beat) {
         const now = on ? ctx.currentTime + 0.012 : 0;
         for (const [v, what, zv, x] of pending) {
           const right = x >= 0, pan = (right ? panR : panL) * 0.7;
-          if (what === 3) {                 // lo bajo de la vuelta: una nota del acorde quebrado, como una mano izquierda
+          if (what === 3) {                 // bottom of the loop: one note of the broken chord, like a left hand
             if (on && now - lastBot > 0.2) {
               lastBot = now;
               const pcs = chordPcs(chordK), root = 48 + pcs[0], triad = [];
@@ -916,7 +916,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
             }
             continue;
           }
-          if (what === 2) {                 // cambio de ala: destello, sin amontonarse
+          if (what === 2) {                 // wing change: a sparkle, never crowded
             beat(2, 0, false, chordK);
             if (on && now - lastSpark > 1.2) { lastSpark = now; note(now, ladder[ladder.length - 1 - Math.floor(Math.random() * 3)] + 24, 0.02, pan, "glass"); }
             continue;
@@ -925,14 +925,14 @@ button[aria-pressed="true"] { border-color: var(--ink); }
             const strong = loops[0] % 4 === 0;
             if (strong) { if (loops[0] > 0) chordK++; botI = 0; if (on) { setPad(now); bass(now, chordPcs(chordK)[0]); } }
             loops[0]++;
-            // La melodía no salta de octava al cambiar de ala: el ala decide el lado, y en la
-            // izquierda se dobla una octava abajo con el segundo timbre, que la oscurece.
+            // The melody does not jump octaves when the wing changes: the wing decides the side, and on
+            // the left it is doubled an octave lower with the second timbre, which darkens it.
             let m;
-            if (sep <= 0.5) { idx[0] = tonic + THEME[themeI++ % THEME.length]; rep[0] = 0; m = ladder[idx[0]]; }   // juntas: el tema
-            else m = pick(0, zv, strong);                                                                      // separadas: improvisa
+            if (sep <= 0.5) { idx[0] = tonic + THEME[themeI++ % THEME.length]; rep[0] = 0; m = ladder[idx[0]]; }   // together: the theme
+            else m = pick(0, zv, strong);                                                                      // apart: it improvises
             if (on) { note(now, m + 12, strong ? 0.13 : 0.1, pan, song[3]); if (!right) note(now, m, 0.045, pan, song[4]); }
             beat(0, 0, strong, chordK);
-          } else if (sep > 0.5 && loops[v]++ % 2 === 0) {   // acompañantes: ya separadas, bajito, por debajo y una vuelta sí y otra no
+          } else if (sep > 0.5 && loops[v]++ % 2 === 0) {   // accompanists: once apart, softly, underneath, on every other loop
             const m = pick(v, zv, false);
             if (on) note(now, m, 0.028, (right ? panR : panL) * 0.95, song[4]);
             beat(1, v, false, chordK);
@@ -940,13 +940,13 @@ button[aria-pressed="true"] { border-color: var(--ink); }
         }
         pending.length = 0;
         if (!on) return;
-        // Cerca: brillante y seco. Lejos: apagado y con más eco. Más separación: eco más largo.
+        // Close: bright and dry. Far: muted, with more echo. More separation: a longer echo.
         const far = Math.min(1, Math.max(0, (dist - 60) / 140));
         toneLP.frequency.setTargetAtTime(9000 * Math.pow(0.16, far), now, 0.1);
         wetG.gain.setTargetAtTime(0.4 + 0.5 * far, now, 0.1);
         fbG.gain.setTargetAtTime(0.15 + 0.3 * Math.min(1, Math.max(0, (Math.log10(Math.max(sep, 1e-9)) + 2) / 3.5)), now, 0.2);
       },
-      burst() {                             // el acorde entero, arpegiado hacia arriba
+      burst() {                             // the whole chord, rolled upwards
         if (!on) return;
         const t = ctx.currentTime + 0.02, pcs = chordPcs(chordK); let i = 0;
         for (let m = 50; m <= 86; m++) if (pcs.includes(m % 12)) { note(t + 0.03 * i, m, 0.05, -0.6 + 0.12 * i, m < 68 ? song[4] : song[3]); i++; }
@@ -955,7 +955,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
         g.gain.setValueAtTime(0.3, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
         o.connect(g); g.connect(dry); o.start(t); o.stop(t + 1);
       },
-      flap() {                              // una escala que sube
+      flap() {                              // a rising scale
         if (!on) return;
         const t = ctx.currentTime + 0.02;
         ladder.slice(-7).forEach((m, i) => note(t + 0.045 * i, m + 12, 0.035, -0.5 + i / 6, song[3]));
@@ -964,9 +964,9 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     };
   })();
 
-  // ---------- interacción ----------
+  // ---------- interaction ----------
   let ptr = null;
-  canvas.addEventListener("pointerdown", (ev) => { ptr = { x: ev.clientX, y: ev.clientY, x0: ev.clientX, y0: ev.clientY, t: performance.now(), moved: false }; try { canvas.setPointerCapture(ev.pointerId); } catch (e) { /* sin captura */ } });
+  canvas.addEventListener("pointerdown", (ev) => { ptr = { x: ev.clientX, y: ev.clientY, x0: ev.clientX, y0: ev.clientY, t: performance.now(), moved: false }; try { canvas.setPointerCapture(ev.pointerId); } catch (e) { /* no capture */ } });
   canvas.addEventListener("pointermove", (ev) => {
     if (!ptr) return;
     if (!ptr.moved && Math.hypot(ev.clientX - ptr.x0, ev.clientY - ptr.y0) > 7) { ptr.moved = true; cam.sway = false; $("hint").style.opacity = 0; }
@@ -976,8 +976,8 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   canvas.addEventListener("pointerup", (ev) => {
     if (ptr && !ptr.moved && performance.now() - ptr.t < 400) {
       const r = canvas.getBoundingClientRect();
-      endIntro(false);                   // tocar la mariposa durante la introducción la da por terminada
-      aleteo((ev.clientX - r.left) / r.width, 1 - (ev.clientY - r.top) / r.height);
+      endIntro(false);                   // tapping the butterfly during the intro ends it
+      wingbeat((ev.clientX - r.left) / r.width, 1 - (ev.clientY - r.top) / r.height);
     }
     ptr = null;
   });
@@ -993,11 +993,11 @@ button[aria-pressed="true"] { border-color: var(--ink); }
   function togglePause() { paused = !paused; $("pause").textContent = paused ? t("resume") : t("pause"); }
   $("pause").addEventListener("click", togglePause);
   $("sound").addEventListener("click", () => { const on = music.toggle(); $("sound").setAttribute("aria-pressed", String(on)); $("sound").textContent = on ? t("mute") : t("sound"); });
-  $("lang").addEventListener("click", () => { lang = lang === "es" ? "en" : "es"; try { localStorage.setItem("mariposa-idioma", lang); } catch (e) { /* sin almacenamiento */ } applyLang(); });
+  $("lang").addEventListener("click", () => { lang = lang === "es" ? "en" : "es"; try { localStorage.setItem("butterfly-lang", lang); } catch (e) { /* no storage */ } applyLang(); });
   document.addEventListener("visibilitychange", () => music.suspend(document.hidden));
   addEventListener("resize", () => { resize(true); drawChart(); });
 
-  // ---------- bucle ----------
+  // ---------- loop ----------
   let last = performance.now(), ema = 16.7, slow = 0, uiTick = 0;
   const segCount = (vis) => Math.min(SEG, vis <= FINE ? Math.ceil(vis) + 1 : SEG_A + Math.ceil((vis - FINE) / 2) + 1);
   const bind = (unit, t, loc) => { gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t); gl.uniform1i(loc, unit); };
@@ -1009,16 +1009,16 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     time += dt;
     resize(false);
 
-    // Calidad adaptativa: si el equipo no sostiene el ritmo, primero menos atmósferas
-    // y después menos resolución. Los fotogramas de pestaña en segundo plano no cuentan.
+    // Adaptive quality: if the device cannot keep up, first fewer atmospheres and then a lower
+    // resolution. Frames from a background tab do not count.
     if (raw < 100) {
       ema += (raw - ema) * 0.06;
       if (ema > 21) { if (++slow > 50) { slow = 0; ema = 16.7; if (nMax > 420) nMax = Math.max(400, Math.floor(nMax * 0.78)); else if (dprCap > 1) { dprCap = 1; resize(true); } } } else slow = 0;
     }
 
     if (!paused) {
-      // Rápido mientras van juntas, lento justo cuando se separan, normal después.
-      // En la introducción el primer tramo va más despacio, para que dé tiempo a leer y a oír el tema.
+      // Fast while they stay together, slow right as they split, normal afterwards.
+      // During the intro the first stretch runs slower, leaving time to read and to hear the theme.
       const want = tSlow === null ? (intro.phase === "play" ? 1.6 : 3.0) : (tBurst === null || simT < tBurst + 3 ? 0.6 : 1.2);
       speed += (want - speed) * Math.min(1, dt * 2.5);
       acc += speed * dt;
@@ -1031,11 +1031,11 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     for (let j = 0; j < 3; j++) tint[j] += (tintGoal[j] - tint[j]) * Math.min(1, dt * 2.5);
     if (cam.sway) { cam.t += dt; cam.az = -96 + 14 * Math.sin(cam.t * 0.16); cam.el = 9 + 4 * Math.sin(cam.t * 0.11); }
     updateCamera();
-    // Cada ala suena donde se ve: su posición en pantalla decide el lado estéreo.
+    // Each wing sounds where it is seen: its on-screen position sets the stereo side.
     music.frame((toUv(8.5, 8.5, 27)[0] - 0.5) * 2.4, (toUv(-8.5, -8.5, 27)[0] - 0.5) * 2.4, cam.dist, sep, onBeat);
 
-    // Tras separarse, las estelas se acortan (cada atmósfera pasa a ser un cometa corto, así
-    // los colores no se funden en blanco) y la exposición baja de "todas superpuestas" a "sueltas".
+    // After they split the trails get shorter (each atmosphere becomes a short comet, so the
+    // colors do not blend into white) and exposure drops from "all stacked" to "apart".
     let mix = tBurst === null ? 0 : Math.max(0, Math.min(1, (simT - tBurst - 1) / 4));
     mix = mix * mix * (3 - 2 * mix);
     const vis = (T - 1) * (1 - mix) + 40 * mix;
@@ -1044,7 +1044,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     const goal = Math.exp(opened * (1 - mix) + Math.log(0.004 * NREF) * mix);
     ref += (goal - ref) * Math.min(1, dt * 3);
 
-    // Mientras coinciden a menos de un píxel, 64 atmósferas con más peso se ven idénticas a todas.
+    // While they coincide within a pixel, 64 atmospheres with more weight look identical to all of them.
     const nDraw = (sep < 0.02 && abs - cohRow >= T) ? Math.min(64, nMax) : nMax;
     const weight = GAIN * NREF / nDraw;
 
@@ -1070,7 +1070,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     gl.uniformMatrix4fv(motes.u.uMVP, false, M);
     gl.uniform1i(motes.u.uT, T); gl.uniform1i(motes.u.uAbs, abs);
     gl.uniform2f(motes.u.uOff, 0, view.offY); gl.uniform1f(motes.u.uFloor, view.floor); gl.uniform1f(motes.u.uTime, time);
-    // Juntas forman una sola estrella grande; separadas, cada una es una luciérnaga pequeña.
+    // Together they form a single large star; apart, each one is a small firefly.
     gl.uniform1f(motes.u.uGain, weight * PASSES * (0.3 + 2.7 * mix * mix) * (1 + 0.6 * kick)); gl.uniform1f(motes.u.uSize, (1.5 - 0.6 * mix) * (1 + 0.35 * kick) * (Hh / 2) / view.ty);
     gl.drawArrays(gl.POINTS, 0, nDraw);
 
@@ -1079,7 +1079,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
     gl.useProgram(plume.p);
     bind(0, posTex, plume.u.uPos); bind(1, colTex, plume.u.uCol);
     gl.uniform1i(plume.u.uK, K); gl.uniform1i(plume.u.uT, T); gl.uniform1i(plume.u.uAbs, abs); gl.uniform1i(plume.u.uBorn, born);
-    // Peso fijo por línea: 96 superpuestas saturan a blanco, una sola queda a media luz.
+    // Fixed weight per line: 96 stacked saturate to white, a single one stays at half light.
     gl.uniform1f(plume.u.uGain, GAIN * 3.3 * (96 / K) * PASSES / 2);
     for (let p = 0; p < 2; p++) { gl.uniform1f(plume.u.uYJ, (p ? 0.6 : -0.6) * 2 / pv[3]); gl.drawArrays(gl.LINES, 0, K * PL_SEG * 2); }
     gl.disable(gl.BLEND);
@@ -1106,7 +1106,7 @@ button[aria-pressed="true"] { border-color: var(--ink); }
 
   resize(true);
   updateCamera();
-  landing();                           // la primera vista: la mariposa ya separada, detrás de la pregunta
+  landing();                           // first view: the butterfly already split, behind the opening line
   applyLang();
   if (reduceMotion) togglePause();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawChart);

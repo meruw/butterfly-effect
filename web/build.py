@@ -1,16 +1,16 @@
-"""Genera docs/ (el sitio publicado) a partir de web/efecto-mariposa.html.
+"""Builds docs/ (the published site) from web/butterfly-effect.html.
 
   python web/build.py
 
-Escribe docs/index.html como pagina independiente, con las etiquetas que usan las
-redes para mostrar la vista previa al compartir el enlace, y docs/CNAME con el dominio.
+Writes docs/index.html as a standalone page, with the tags social networks use to
+show a preview card when the link is shared, and docs/CNAME with the domain.
 """
 import os
 
 SITE = "https://chaos.meruw.dev"
-TITLE = "Efecto mariposa"
-DESCRIPTION = ("Basta un aleteo para que el mañana sea otro. 2.000 atmósferas del modelo de Lorenz, en vivo: "
-               "elige la diferencia inicial, toca la mariposa y escucha el tema que toca.")
+TITLE = "Butterfly Effect"
+DESCRIPTION = ("One wingbeat is enough to change tomorrow. 2,000 atmospheres of the Lorenz model, live: "
+               "choose the initial difference, tap the butterfly and listen to the theme it plays.")
 ICON = ("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E"
         "%3Crect width='32' height='32' rx='7' fill='%2305060d'/%3E"
         "%3Cpath d='M16 20C9 6 3 9 4 16s8 9 12 4c4 5 11 3 12-4S23 6 16 20Z' fill='none' stroke='%23eceaf2' stroke-width='1.8'/%3E"
@@ -18,12 +18,12 @@ ICON = ("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0
 
 here = os.path.dirname(os.path.abspath(__file__))
 docs = os.path.normpath(os.path.join(here, "..", "docs"))
-src = open(os.path.join(here, "efecto-mariposa.html"), encoding="utf-8").read()
+src = open(os.path.join(here, "butterfly-effect.html"), encoding="utf-8").read()
 
-# El fuente es un fragmento: titulo, enlaces y estilos primero, y despues el cuerpo.
+# The source is a fragment: title, links and styles first, then the body.
 cut = src.index("</style>") + len("</style>")
 head = f"""<!doctype html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -53,4 +53,4 @@ with open(os.path.join(docs, "index.html"), "w", encoding="utf-8", newline="\n")
 with open(os.path.join(docs, "CNAME"), "w", encoding="utf-8", newline="\n") as f:
     f.write(SITE.split("//")[1] + "\n")
 open(os.path.join(docs, ".nojekyll"), "w").close()
-print("escrito", docs)
+print("wrote", docs)
