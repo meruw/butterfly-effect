@@ -36,7 +36,11 @@ El número del pie es la separación máxima entre atmósferas, medida en la sim
 
 Cada lanzamiento anota cuánto tiempo siguieron juntas las atmósferas. Al probar varias diferencias aparece el resultado de fondo: hacer la medición inicial mil veces más precisa solo compra unas pocas unidades de tiempo más de pronóstico fiable.
 
-Tocar la mariposa da un aleteo: todas las atmósferas colapsan en una sola luz, desde donde esté una de ellas, y vuelven a separarse. El sonido es opcional y sigue la misma idea que el del video.
+Tocar la mariposa da un aleteo: todas las atmósferas colapsan en una sola luz, desde donde esté una de ellas, y vuelven a separarse.
+
+El sonido es opcional y sigue la misma idea que el del video, con una diferencia: cada valor de la perilla tiene su propia canción. Son doce, de re lidio con timbre de cristal para una billonésima a do menor armónico con caja de música para una décima. Además, el zoom la hace más brillante o más lejana, la rotación mueve cada ala en el estéreo según dónde se ve y la separación entre atmósferas alarga el eco.
+
+La página está en español y en inglés, con un botón para cambiar.
 
 En teléfono la simulación y la perilla caben en una pantalla. Para que vaya fluida, la gráfica de pronóstico se dibuja en GPU, mientras las atmósferas coinciden solo se dibujan 64 con más peso (se ven idénticas), las estelas usan menos segmentos en su parte vieja y la cantidad de atmósferas baja sola si el equipo no sostiene el ritmo.
 
@@ -51,17 +55,18 @@ Para publicarla con GitHub Pages basta con servir la carpeta `docs/`. El fuente 
 - **Arranque en frío:** una primera pasada renderiza el momento de la divergencia y lo coloca al inicio del video, antes de contar la historia en orden.
 - **Rendimiento:** las partículas se reparten entre 8 procesos y se procesan en bloques de 4.096 que caben en caché. No usa GPU y corre con prioridad baja.
 
-## El sonido también sale de la simulación
+## La música la toca la mariposa
 
-`sound.py` hace audibles 20 de las 3.000 atmósferas. Cada vez que una completa una vuelta al atractor toca una nota:
+`sound.py` hace audibles 20 de las 3.000 atmósferas, y cada giro se oye en el momento en que ocurre:
 
-- **Cuándo:** el instante de la vuelta, ajustado a una rejilla de semicorcheas.
-- **Qué nota:** lo alto que llegó esa vuelta (el máximo de `z`) elige entre las notas del acorde que suena en ese momento.
-- **Lado estéreo:** depende del ala en la que está (el signo de `x`).
+- **Cada vuelta:** una nota aguda en lo alto del giro y una grave en lo bajo. El ritmo de la melodía es la velocidad a la que gira la atmósfera.
+- **Cada ala tiene su voz:** la derecha es celesta, aguda y a la derecha; la izquierda es arpa, más grave y a la izquierda.
+- **Cada cambio de ala** cambia el acorde y trae una nota de bajo.
+- **El tamaño de la vuelta** decide la altura: cuanto más alto llega, más aguda la nota.
 
-Mientras las atmósferas coinciden, las 20 tocan la misma melodía al unísono. Cuando divergen, la melodía se abre en un arpegio de 20 voces. Los destellos agudos marcan cada cambio de ala de las voces principales.
+Mientras las atmósferas coinciden, las 20 tocan lo mismo al unísono. Cuando divergen, cada una sigue su propia ala y la melodía se abre en 20 voces.
 
-La progresión de acordes en re mayor, el bajo, el colchón y el glissando de arpa que sube hasta el momento de la divergencia son composición, no datos.
+Qué acordes le tocan a cada ala (re y la a la derecha, si menor y sol a la izquierda), el colchón y el glissando de arpa que sube hasta el momento de la divergencia son composición, no datos.
 
 ## Uso
 
@@ -73,7 +78,7 @@ pip install -r requirements.txt
 python butterfly.py --out out/efecto_mariposa.mp4
 ```
 
-Ese comando renderiza el video, sintetiza el audio y lo mezcla. Para probar cambios rápido, fotogramas sueltos a media resolución:
+Ese comando renderiza el video, sintetiza el audio y lo mezcla. Con `--lang en` sale la versión en inglés. Para probar cambios rápido, fotogramas sueltos a media resolución:
 
 ```bash
 python butterfly.py --scale 0.5 --stills 0,6,14,25

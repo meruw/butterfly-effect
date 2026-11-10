@@ -1,24 +1,27 @@
 """
-Banda sonora del efecto mariposa, gobernada por la propia simulacion.
+Banda sonora del efecto mariposa: la musica sigue a la mariposa.
 
-Se escuchan 20 de las 3.000 atmosferas. Cada vez que una completa una vuelta
-al atractor toca una nota:
+Se escuchan 20 de las 3.000 atmosferas, y cada giro se oye en el momento en
+que ocurre:
 
-  - cuando: el instante de la vuelta, ajustado a una rejilla de semicorcheas;
-  - que nota: lo alto que llego la vuelta (el maximo de z) elige entre las
-    notas del acorde que suena en ese momento;
-  - donde: el ala en la que esta (el signo de x) decide el lado estereo.
+  - en lo alto de cada vuelta suena una nota aguda y en lo bajo una grave;
+    el ritmo de la melodia es la velocidad a la que gira la atmosfera;
+  - cada ala tiene su voz: la derecha es celesta, aguda y a la derecha;
+    la izquierda es arpa, mas grave y a la izquierda;
+  - cada cambio de ala cambia el acorde y trae una nota de bajo;
+  - cuanto mas grande es la vuelta, mas alta (o mas baja) es la nota.
 
-Mientras las atmosferas coinciden, las 20 tocan la misma melodia al unisono.
-Cuando divergen, la melodia se abre en un arpegio de 20 voces.
+Mientras las atmosferas coinciden, las 20 tocan lo mismo al unisono. Cuando
+divergen, cada una sigue su propia ala y la melodia se abre en 20 voces.
 
-La progresion de acordes, el bajo, el colchon y el glissando que sube hasta
-el momento de la divergencia son composicion, no datos.
+Que acordes le tocan a cada ala, el colchon y el glissando que sube hasta el
+momento de la divergencia son composicion, no datos.
 
 Uso:
   python sound.py --video out/efecto_mariposa.mp4
 """
 import argparse
+import bisect
 import math
 import os
 import subprocess
@@ -31,10 +34,9 @@ import butterfly as bf
 SR = 48000
 NVOICES = 20
 LEADS = (0, 5, 10, 15, 19)          # voces que suenan en primer plano
-BPM = 96.0
-BEAT = 60.0 / BPM
-S16 = BEAT / 4.0                    # semicorchea
-BAR = 4.0 * BEAT
+BAR = 2.5                            # duracion de cada acorde del colchon tras la divergencia
+RIGHT = ("D", "A")                   # acordes del ala derecha: alternan en cada visita
+LEFT = ("Bm", "G")                   # acordes del ala izquierda
 
 # Re mayor. Clases de altura de cada acorde: tres notas del acorde y una de color.
 CHORDS = {
@@ -61,21 +63,20 @@ def pool(chord, lo, hi):
     return [m for m in range(lo, hi + 1) if m % 12 in pcs]
 
 
-def chord_plan(ts, tb, tf, te):
-    """Lista de (inicio, acorde). La tension se guarda para justo antes de la divergencia."""
-    plan = []
-    cyc = ["D", "A", "Bm", "G"]
-    t, i = 0.0, 0
-    while t < ts - 0.5 * BAR:
-        plan.append((t, cyc[i % 4])); t += BAR; i += 1
-    half = (tb - ts) * 0.5
-    plan += [(ts, "G"), (ts + half, "A"), (tb, "D")]
-    if tb + BAR < tf - 1.0:
-        plan.append((tb + BAR, "Bm"))
-    end = te - 3.4
-    third = (end - tf) / 3.0
-    plan += [(tf, "G"), (tf + third, "Bm"), (tf + 2 * third, "A"), (end, "D")]
-    return plan
+def wing_visits(x):
+    """Tramos de una trayectoria: (paso inicial, ala, numero de visita a esa ala)."""
+    sg = np.where(x >= 0, 1, -1)
+    starts = np.concatenate([[0], np.nonzero(sg[1:] != sg[:-1])[0] + 1])
+    out, seen = [], {1: 0, -1: 0}
+    for st in starts:
+        w = int(sg[st])
+        out.append((int(st), w, seen[w]))
+        seen[w] += 1
+    return out
+
+
+def visit_chord(wing, k):
+    return (RIGHT if wing > 0 else LEFT)[k % 2]
 
 
 def chord_at(plan, t):
@@ -140,67 +141,71 @@ def synth(sub, ci, ev, fps, seed=5):
     n = int(math.ceil(dur * SR))
     t = np.arange(n) / SR
     tg, ts, tb, tf, te = (ev[k] / fps for k in ("go", "slow", "burst", "fast", "end"))
-    plan = chord_plan(ts, tb, tf, te)
     mx = Mixer(n, seed)
     nsteps = int(ci[-1])
     u, tt = step_times(ci, fps)
     voices = np.linspace(0, sub.shape[1] - 1, NVOICES).round().astype(int)
     detune = rng.uniform(-4.0, 4.0, NVOICES)
 
-    def grid(x):
-        return round(x / S16) * S16
+    def when(step):
+        return float(np.interp(step, u, tt))
 
-    # --- melodia: una nota por cada vuelta de cada atmosfera ---
+    # --- armonia: la marca la atmosfera central con sus cambios de ala ---
+    lead_v = voices[NVOICES // 2]
+    plan = [(when(st), visit_chord(w, k)) for st, w, k in wing_visits(sub[:nsteps + 1, lead_v, 0])]
+    plan = [(t0, c) for t0, c in plan if t0 < tb + 0.4]
+    t0, i = tb + 0.4, 0
+    while t0 < te - 3.4 - 0.5 * BAR:                 # ya divergidas: las dos alas suenan a la vez
+        plan.append((t0, ("D", "G")[i % 2])); t0 += BAR; i += 1
+    plan.append((te - 3.4, "D"))
+
+    # --- melodia: cada giro de cada atmosfera, en el instante en que ocurre ---
     count = 0
     for k, v in enumerate(voices):
         x = sub[:nsteps + 1, v, 0]
         z = sub[:nsteps + 1, v, 2]
-        pk = np.nonzero((z[1:-1] > z[:-2]) & (z[1:-1] >= z[2:]) & (z[1:-1] > 24.0))[0] + 1
+        visits = wing_visits(x)
+        vstart = [a[0] for a in visits]
         lead = k in LEADS
-        low = (k % 2 == 1)
-        last = -1.0
-        for p in pk:
-            tq = grid(float(np.interp(p, u, tt)))
-            if tq <= last + 1e-6 or tq > te - 0.3:
-                continue                     # una nota por casilla y voz
-            last = tq
-            ch = chord_at(plan, tq)
-            ps = pool(ch, 50, 76) if low else pool(ch, 62, 88)
-            frac = min(0.999, max(0.0, (z[p] - 30.0) / 17.0))
-            midi = ps[int(frac * len(ps))]
-            beat = int(round(tq / S16)) % 4 == 0
-            amp = (1.0 if lead else 0.4) * (1.0 if beat else 0.78) * rng.uniform(0.9, 1.05)
-            pan = float(np.clip(x[p] / 14.0, -1.0, 1.0)) * (0.75 if lead else 1.0)
-            mx.note("lead" if lead else "cloud", tq + rng.uniform(0.0, 0.006), midi, amp, pan,
-                    "harp" if low else "celesta", detune[k])
+        top = np.nonzero((z[1:-1] > z[:-2]) & (z[1:-1] >= z[2:]) & (z[1:-1] > 24.0))[0] + 1
+        bot = np.nonzero((z[1:-1] < z[:-2]) & (z[1:-1] <= z[2:]) & (z[1:-1] < 24.0))[0] + 1
+        evs = [(int(p), True) for p in top] + ([(int(p), False) for p in bot] if lead else [])
+        for p, high in sorted(evs):
+            tn = when(p)
+            if tn > te - 0.3:
+                continue
+            _, wing, nvis = visits[bisect.bisect_right(vstart, p) - 1]
+            ch = visit_chord(wing, nvis)
+            if high:                                   # lo alto del giro: cuanto mas alto, mas aguda
+                ps = pool(ch, 69, 93) if wing > 0 else pool(ch, 57, 81)
+                frac = (z[p] - 30.0) / 17.0
+            else:                                      # lo bajo del giro: cuanto mas hondo, mas grave
+                ps = pool(ch, 62, 76) if wing > 0 else pool(ch, 50, 64)
+                frac = (z[p] - 4.0) / 16.0
+            midi = ps[int(min(0.999, max(0.0, frac)) * len(ps))]
+            amp = (1.0 if lead else 0.35) * (1.0 if high else 0.7) * rng.uniform(0.92, 1.05)
+            mx.note("lead" if lead else "cloud", tn, midi, amp, wing * (0.55 if lead else 0.9),
+                    "celesta" if wing > 0 else "harp", detune[k])
             count += 1
-        # destellos: cuando una voz principal cambia de ala
-        if lead:
-            sw = np.nonzero(np.sign(x[1:]) != np.sign(x[:-1]))[0] + 1
-            lastq = -1.0
-            for p in sw:
-                tq = grid(float(np.interp(p, u, tt)))
-                if tq <= lastq + 2 * S16 or tq < tg + 1.0 or tq > te - 0.5:
-                    continue
-                lastq = tq
-                ps = pool(chord_at(plan, tq), 86, 98)
-                mx.note("spark", tq, ps[int(rng.integers(0, len(ps)))], 0.5 * rng.uniform(0.7, 1.0),
-                        float(np.sign(x[p])) * 0.6, "spark")
+        if lead:                                       # destello en cada cambio de ala
+            for st, wing, nvis in visits[1:]:
+                tn = when(st)
+                if tg + 0.8 < tn < te - 0.5:
+                    ps = pool(visit_chord(wing, nvis), 86, 98)
+                    mx.note("spark", tn, ps[int(rng.integers(0, len(ps)))], 0.5 * rng.uniform(0.7, 1.0), wing * 0.7, "spark")
 
-    # --- bajo: fundamental del acorde, entra en el segundo compas ---
-    for i, (t0, ch) in enumerate(plan):
-        t1 = plan[i + 1][0] if i + 1 < len(plan) else te
-        tq = grid(t0)
-        while tq < t1 - 0.2:
-            if tq >= BAR - 0.01:
-                mx.note("bass", tq, CHORDS[ch]["bass"], 1.0 if abs(tq - grid(t0)) < 0.01 else 0.6, 0.0, "bass")
-            tq += 2 * BEAT
+    # --- bajo: la fundamental del acorde nuevo, en cada cambio ---
+    lastb = -1.0
+    for t0, ch in plan:
+        if t0 - lastb >= 0.45 and t0 > 0.6:
+            mx.note("bass", t0, CHORDS[ch]["bass"], 1.0, 0.0, "bass")
+            lastb = t0
 
     # --- colchon: el acorde sostenido, con cruces suaves entre acordes ---
     pad = np.zeros(n)
     for i, (t0, ch) in enumerate(plan):
         t1 = plan[i + 1][0] if i + 1 < len(plan) else te + 1.0
-        envp = np.clip((t - (t0 - 0.25)) / 0.6, 0, 1) * np.clip((t1 + 0.55 - t) / 0.8, 0, 1)
+        envp = np.clip((t - (t0 - 0.1)) / 0.3, 0, 1) * np.clip((t1 + 0.4 - t) / 0.55, 0, 1)
         sel = envp > 0
         if not sel.any():
             continue
